@@ -7,7 +7,7 @@ import torch.nn.functional as F
 from torch import nn, optim
 from torch.autograd import grad
 from random import shuffle
-from torch.distributions.normal import Normal
+from torch.distributions.multivariate_normal import MultivariateNormal
 
 #env knowledge
 obs_dim = 24
@@ -27,11 +27,24 @@ policy_lr = 3e-4
 
 policy = Policy(obs_dim,action_dim)
 val = Val(obs_dim)
+policy.load_state_dict(torch.load('policy_vpg_mode2_290.pkl'))
+val.load_state_dict(torch.load('val_vpg_mode2_290.pkl'))
 
 val_optim = optim.Adam(val.parameters(), lr=val_lr)
 policy_optim = optim.Adam(policy.parameters(),lr=policy_lr)
 
+def get_cov_mat(diag,factor02,factor01=0, factor23=0):
+    cov_mat = torch.tensor([
+            [diag,    factor01, factor02, 0],
+            [factor01, diag,    0,        0],
+            [factor02, 0,       diag,     factor23],
+            [0,        0,       factor23, diag]
+        ],dtype=torch.float32)
+    return cov_mat
+
+
 #%%
+
 eps_lens = []
 env = gym.make('BipedalWalker-v2')
 for k in range(epochs):
@@ -47,17 +60,19 @@ for k in range(epochs):
             obs_tensor = torch.from_numpy(obs.astype('float32'))
             mean = policy(obs_tensor)
 #            print(p)
-            dbu = Normal(mean,2)
+            dbu = MultivariateNormal(mean,get_cov_mat(0.3,0))
             a = dbu.sample()
-            logp = torch.sum(dbu.log_prob(a))
+            logp = dbu.log_prob(a)
             #g = grad(obj,policy.parameters())
             obs_new, r, done, info = env.step(a.data.tolist())
             if r < -90:
-                r = -20
+                r = -15
             eps.append([obs,a,r,logp,obs_new])
             obs = obs_new
             i += 1
         print('end in {} steps'.format(i+1))
+#        if (i+1) == 1601:
+#            eps[-1][1] = -50
         D.append(eps)
     eps_lens.append(np.mean([len(x) for x in D]))
 
@@ -117,29 +132,28 @@ plt.plot(eps_lens[:200])
 
 #%%
 env = gym.make('BipedalWalker-v2')
-for i_episode in range(5):
+for i_episode in range(10):
     obs = env.reset()
     t = 0
     r_total = 0
     done = False
-    while not done:
+    while not done and t < 2000:
         if (t+1)%100 == 0:
             print(t+1)
         env.render()
         obs_tensor = torch.from_numpy(obs.astype('float32'))
         mean = policy(obs_tensor)
 #            print(p)
-        dbu = Normal(mean,0)
+        dbu = MultivariateNormal(mean,get_cov_mat(0.3,0))
         a = dbu.sample()
-            #g = grad(obj,policy.parameters())
-        obs_new, r, done, info = env.step(a.data.tolist())
-#        action_explore = np.clip(action + noise(action),-1,1)
-#        print(done)
-        #history.append([obs,action[0],reward,obs_new])
+#        obs_new, r, done, info = env.step(a.data.tolist())
+        obs_new, r, done, info = env.step(mean.data.tolist())
+
+
         obs = obs_new
         t += 1
         r_total += r
     print('points: {}'.format(r_total))
 #%%
-#torch.save(policy.state_dict(), 'policy_vpg_x.pkl')
-#torch.save(val.state_dict(), 'val_vpg_x.pkl')
+#torch.save(policy.state_dict(), 'policy_vpg_mode2_300.pkl')
+#torch.save(val.state_dict(), 'val_vpg_mode2_300.pkl')
