@@ -27,8 +27,8 @@ policy_lr = 3e-4
 
 policy = Policy(obs_dim,action_dim)
 val = Val(obs_dim)
-policy.load_state_dict(torch.load('policy_vpg_mode2_290.pkl'))
-val.load_state_dict(torch.load('val_vpg_mode2_290.pkl'))
+policy.load_state_dict(torch.load('policy_vpg_mode2_300.pkl'))
+val.load_state_dict(torch.load('val_vpg_mode2_300.pkl'))
 
 val_optim = optim.Adam(val.parameters(), lr=val_lr)
 policy_optim = optim.Adam(policy.parameters(),lr=policy_lr)
