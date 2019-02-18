@@ -16,13 +16,13 @@ action_dim = 1
 # parameters
 epochs = 200
 D_size = 5
-gamma = 0.98
-lda = 0.97 # for generalized advantage esitmate
+gamma = 0.99
+lda = 0.96 # for generalized advantage esitmate
 
-val_epochs = 80
+val_epochs = 20
 val_lr = 1e-3
 
-policy_lr = 3e-4
+policy_lr = 1e-3
 std = 0.3
 
 
@@ -134,8 +134,10 @@ for D in qn.chunks(D_total,5):
             obs_new = torch.from_numpy(obs_new.astype('float32'))
             delta = (gamma*val(obs_new)+r - val(obs))[0].detach()
             delta_cum = delta + gamma*lda*delta_cum
-            print(delta_cum)
-            (-logp*delta_cum/scalar).backward()
+#            print(delta_cum)
+            p = torch.exp(logp)
+            # off-policy vpg learning
+            (-p*logp*delta_cum/scalar).backward()
 #        break
     policy_optim.step()
 
@@ -163,22 +165,19 @@ for k in range(1000):
 
 
 #%%
-#env = gym.make('CartPole-v1')
-#for i_episode in range(2):
-#    obs = env.reset()
-#    for t in range(200):
-#        if (t+1)%100 == 0:
-#            print(t+1)
-#        env.render()
-#        obs_tensor = torch.from_numpy(obs.astype('float32'))
-#        p = policy(obs_tensor)
-##            print(p)
-#        categorical = Categorical(p)
-#        a = categorical.sample()
-#        logp = torch.log(p[a])
-#            #g = grad(obj,policy.parameters())
-#        obs_new, r, done, info = env.step(a.data.tolist())
-##        action_explore = np.clip(action + noise(action),-1,1)
-##        print(done)
-#        #history.append([obs,action[0],reward,obs_new])
-#        obs = obs_new
+env = gym.make('MountainCarContinuous-v0')
+for i_episode in range(2):
+    obs = env.reset()
+    for t in range(2000):
+        if (t+1)%100 == 0:
+            print(t+1)
+        env.render()
+        obs_tensor = torch.from_numpy(obs.astype('float32'))
+        mean = policy(obs_tensor)
+#     
+            #g = grad(obj,policy.parameters())
+        obs_new, r, done, info = env.step(mean.data.tolist())
+#        action_explore = np.clip(action + noise(action),-1,1)
+#        print(done)
+        #history.append([obs,action[0],reward,obs_new])
+        obs = obs_new
