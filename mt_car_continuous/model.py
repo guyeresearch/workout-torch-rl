@@ -6,11 +6,11 @@ import qn
 
 # simple three layers
 class Policy(nn.Module):
-    def __init__(self,dim_in, dim_out):
+    def __init__(self,dim_in, dim_out,hidden_size=64):
         super().__init__()
-        self.fc1 = nn.Linear(dim_in,128)
-        self.fc2 = nn.Linear(128,128)
-        self.fc3 = nn.Linear(128,dim_out)
+        self.fc1 = nn.Linear(dim_in,hidden_size)
+        self.fc2 = nn.Linear(hidden_size,hidden_size)
+        self.fc3 = nn.Linear(hidden_size,dim_out)
 
 
     def forward(self,x):
@@ -21,12 +21,12 @@ class Policy(nn.Module):
 #
 #
 class Val(nn.Module):
-    def __init__(self,dim_in):
+    def __init__(self,dim_in,hidden_size=64):
         super().__init__()
         self.dim_in = dim_in
-        self.fc1 = nn.Linear(dim_in,128)
-        self.fc2 = nn.Linear(128,128)
-        self.fc3 = nn.Linear(128,1)
+        self.fc1 = nn.Linear(dim_in,hidden_size)
+        self.fc2 = nn.Linear(hidden_size,hidden_size)
+        self.fc3 = nn.Linear(hidden_size,1)
 
 
     def forward(self,x):

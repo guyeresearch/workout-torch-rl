@@ -19,15 +19,16 @@ D_size = 5
 gamma = 0.99
 lda = 0.96 # for generalized advantage esitmate
 
-val_epochs = 20
+val_epochs = 100
 val_lr = 1e-3
 
-policy_lr = 1e-3
-std = 0.3
+policy_epochs = 10
+policy_lr = 3e-4
+std = 1
 
 
-policy = Policy(obs_dim,action_dim)
-val = Val(obs_dim)
+policy = Policy(obs_dim,action_dim,200)
+val = Val(obs_dim,200)
 
 val_optim = optim.Adam(val.parameters(), lr=val_lr)
 policy_optim = optim.Adam(policy.parameters(),lr=policy_lr)
@@ -91,40 +92,39 @@ plt.show()
 D_total = qn.load('primer_D.pkl')
 
 
+
 #%%
-eps_lens = []
-for D in qn.chunks(D_total,5):
 
     #fit val
-    mat = []
-    y = []
-    for eps in D:
-        v = 0
-        for item in eps[::-1]:
-            mat.append(item[0])
-            v = v*gamma + item[2]
-            y.append(v)
-    mat = torch.from_numpy(np.array(mat,dtype='float32'))
-    mat[:,1] = mat[:,1]*10
-    y = torch.from_numpy(np.array(y,dtype='float32')[:,None])
-    for _ in range(val_epochs):
-        y_pred = val(mat)
-        v_loss = F.mse_loss(y_pred,y)
-        print(v_loss)
-        val_optim.zero_grad()
-        v_loss.backward()
-        val_optim.step()
+mat = []
+y = []
+for eps in D_total:
+    v = 0
+    for item in eps[::-1]:
+        mat.append(item[0])
+        v = v*gamma + item[2]
+        y.append(v)
+mat = torch.from_numpy(np.array(mat,dtype='float32'))
+#mat[:,1] = mat[:,1]*10
+y = torch.from_numpy(np.array(y,dtype='float32')[:,None])
+for _ in range(val_epochs):
+    y_pred = val(mat)
+    v_loss = F.mse_loss(y_pred,y)
+    print(v_loss)
+    val_optim.zero_grad()
+    v_loss.backward()
+    val_optim.step()
 
-
+cc = []
+for k in range(policy_epochs):
+    print(k)
     scalar = D_size
     policy_optim.zero_grad()
-    for eps in D:
+    for eps in D_total:
         delta_cum = 0
         for item in eps[::-1]:
             obs,a,r = item[:3]
-            obs = np.array([obs[0],obs[1]*10])
             obs_new = item[-1]
-            obs_new = np.array([obs_new[0],obs_new[1]*10])
             obs_tensor = torch.from_numpy(obs.astype('float32'))
             mean = policy(obs_tensor)
             dbu = Normal(mean,std)
@@ -134,12 +134,14 @@ for D in qn.chunks(D_total,5):
             obs_new = torch.from_numpy(obs_new.astype('float32'))
             delta = (gamma*val(obs_new)+r - val(obs))[0].detach()
             delta_cum = delta + gamma*lda*delta_cum
-#            print(delta_cum)
-            p = torch.exp(logp)
+            cc.append(delta_cum)
+            p = torch.exp(logp).detach()
             # off-policy vpg learning
+            # test if on-policy vpg works, most likely not
             (-p*logp*delta_cum/scalar).backward()
 #        break
     policy_optim.step()
+#    break
 
 #%%
 D2 = []
@@ -166,7 +168,7 @@ for k in range(1000):
 
 #%%
 env = gym.make('MountainCarContinuous-v0')
-for i_episode in range(2):
+for i_episode in range(5):
     obs = env.reset()
     for t in range(2000):
         if (t+1)%100 == 0:
@@ -174,9 +176,11 @@ for i_episode in range(2):
         env.render()
         obs_tensor = torch.from_numpy(obs.astype('float32'))
         mean = policy(obs_tensor)
-#     
+        dbu = Normal(mean,std)   
+        a = dbu.sample()
             #g = grad(obj,policy.parameters())
-        obs_new, r, done, info = env.step(mean.data.tolist())
+        obs_new, r, done, info = env.step(a.data.tolist())
+#        obs_new, r, done, info = env.step(mean.data.tolist())
 #        action_explore = np.clip(action + noise(action),-1,1)
 #        print(done)
         #history.append([obs,action[0],reward,obs_new])
