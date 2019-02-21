@@ -19,10 +19,10 @@ D_size = 5
 gamma = 0.99
 lda = 0.96 # for generalized advantage esitmate
 
-val_epochs = 100
+val_epochs = 50
 val_lr = 1e-3
 
-policy_epochs = 10
+policy_epochs = 5
 policy_lr = 3e-4
 std = 1
 
@@ -142,31 +142,70 @@ for k in range(policy_epochs):
 #        break
     policy_optim.step()
 #    break
-
-#%%
-D2 = []
-for k in range(1000):
-    eps = []
-    obs = env.reset()
-    done = False
-    i = 0
-    while not done:    
-        obs_tensor = torch.from_numpy(obs.astype('float32'))
-        mean = policy(obs_tensor)
-        dbu = Normal(mean,std)
-        a = dbu.sample().data.tolist()
-        obs_new, r, done, info = env.step(a)
-        eps.append([obs,a,r,obs_new])
-        obs = obs_new
-        i += 1
-    if len(eps) < 999:
-        print('end in {} steps. total D:{}. k: {}'.format(i+1,len(D2),k))
-        D2.append(eps[-300:])
     
+#%% on-policy learning
+val_epochs = 5
+for k in range(epochs):
+    print('{} epoch'.format(k))
+    D = []
+    while len(D) < D_size:
+       eps = []
+       obs = env.reset()
+       done = False
+       i = 0
+       while not done:    
+            obs_tensor = torch.from_numpy(obs.astype('float32'))
+            mean = policy(obs_tensor)
+            dbu = Normal(mean,std)
+            a = dbu.sample()
+            logp = torch.sum(dbu.log_prob(a))
+            obs_new, r, done, info = env.step(a.data.tolist())
+            eps.append([obs,a,r,logp,obs_new])
+            obs = obs_new
+            i += 1
+       
+       #print(len(eps))
+       if len(eps) < 999:
+           print('end in {} steps. D size:{}'.format(i+1,len(D)))
+           D.append(eps)
+    
+    #fit val
+    mat = []
+    y = []
+    for eps in D:
+        v = 0
+        for item in eps[::-1]:
+            mat.append(item[0])
+            v = v*gamma + item[2]
+            y.append(v)
+    mat = torch.from_numpy(np.array(mat,dtype='float32'))
+    y = torch.from_numpy(np.array(y,dtype='float32')[:,None])
+    for _ in range(val_epochs):
+        y_pred = val(mat)
+        v_loss = F.mse_loss(y_pred,y)
+#        print(v_loss)
+        val_optim.zero_grad()
+        v_loss.backward()
+        val_optim.step()
 
+     #fit policy simple
+    scalar = D_size
+    policy_optim.zero_grad()
+    for eps in D:
+        delta_cum = 0
+        for item in eps[::-1]:
+            obs,a,r,logp, obs_new = item
+            # delta for GAE
+            obs = torch.from_numpy(obs.astype('float32'))
+            obs_new = torch.from_numpy(obs_new.astype('float32'))
+            delta = (gamma*val(obs_new)+r - val(obs))[0].detach()
+            delta_cum = delta + gamma*lda*delta_cum
+#            print(delta,delta_cum)
+            # accumulate grads
+            (-logp*delta_cum/scalar).backward()
+    policy_optim.step()   
 
-
-#%%
+#%% test
 env = gym.make('MountainCarContinuous-v0')
 for i_episode in range(5):
     obs = env.reset()
@@ -176,7 +215,7 @@ for i_episode in range(5):
         env.render()
         obs_tensor = torch.from_numpy(obs.astype('float32'))
         mean = policy(obs_tensor)
-        dbu = Normal(mean,std)   
+        dbu = Normal(mean,1)   
         a = dbu.sample()
             #g = grad(obj,policy.parameters())
         obs_new, r, done, info = env.step(a.data.tolist())
