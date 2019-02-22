@@ -65,7 +65,7 @@ for k in range(epochs):
         a_max = policy_target(obs_new)
         q_val_target = q_target(obs_new,a_max)[:,0]
         y = (r + gamma*(1-done)*q_val_target).detach()
-        q_val = q(obs,a[:,None])[:,0]
+        q_val = q(obs,a)[:,0]
         loss = F.mse_loss(q_val,y)
         q_optim.zero_grad()
         loss.backward()

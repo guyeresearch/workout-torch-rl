@@ -33,7 +33,8 @@ class Q(nn.Module):
     def forward(self,x,a):
         x = torch.relu(self.fc1(x))
         # is this the right implementation?
-        x = torch.cat((x,a))
+        # concatenate along dimension 1
+        x = torch.cat((x,a),1)
         x = torch.relu(self.fc2(x))
         x = self.fc3(x)
         return x
