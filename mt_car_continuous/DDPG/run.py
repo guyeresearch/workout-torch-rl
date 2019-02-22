@@ -16,6 +16,8 @@ action_dim = 1
 epochs = 200
 epoch_eps_size = 10
 update_num = 10
+rand_explore_epochs = 20
+
 batch_size = 64
 buffer_max = 1e6
 
@@ -45,7 +47,7 @@ for k in range(epochs):
         obs = env.reset()
         done = False
         while not done:
-            if k < 20:
+            if k < rand_explore_epochs:
                 a = env.action_space.sample()
             else:
                 a = [policy(obs).data.tolist()[0] + 
