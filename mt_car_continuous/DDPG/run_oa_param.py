@@ -1,7 +1,7 @@
 import gym
 import numpy as np
 import torch
-from lib_oa_param import Policy, Q, Buffer
+from lib_oa_param import *
 import qn
 import torch.nn.functional as F
 from torch import nn, optim
@@ -13,40 +13,45 @@ import copy
 obs_dim = 2
 action_dim = 1
 
-epochs = 200
-epoch_eps_size = 10
-update_num = 1000
-rand_explore_epochs = 20
+epochs = 50
+epoch_eps_size = 3
+#update_num = 1000
+rand_explore_epochs = 10
 
-batch_size = 100
-buffer_max = 1e6
+batch_size = 64
+buffer_max = 1e5
 
-gamma = 0.95
+gamma = 0.99
 rho = 0.995
 
 q_lr = 1e-3
-policy_lr = 1e-3
+policy_lr = 1e-4
 
 policy = Policy(obs_dim,action_dim,200)
 q = Q(obs_dim,action_dim,200)
 
-# change to parameter copy ???
-policy_target = copy.deepcopy(policy)
-q_target = copy.deepcopy(q)
+policy_target = Policy(obs_dim,action_dim,200)
+q_target = Q(obs_dim,action_dim,200)
+
+hard_update(policy_target, policy)
+hard_update(q_target, q)
 
 q_optim = optim.Adam(q.parameters(), lr=q_lr)
 policy_optim = optim.Adam(policy.parameters(),lr=policy_lr)
 
-# buffer = Buffer(batch_size,buffer_max)
+buffer = Buffer(batch_size,buffer_max)
+explore = False
 buffer = qn.load('buffer_rand.pkl')
 #%%
 env = gym.make('MountainCarContinuous-v0')
-for k in range(epochs):
+for k in range(epochs)[10:]:
     print('epoch {}'.format(k))
-#    if k == rand_explore_epochs:
-#        qn.dump(buffer,'buffer_rand.pkl')
-    if k >= rand_explore_epochs:
+    update_num = 1600
+    if k >= rand_explore_epochs or explore:
+#        if k == rand_explore_epochs:
+#            qn.dump(buffer,'buffer_rand.pkl')
         added = 0
+        update_num = 0
         while added < epoch_eps_size:
             eps = []
             obs = env.reset()
@@ -57,17 +62,18 @@ for k in range(epochs):
                 else:
                     obs_tensor = torch.tensor(obs,dtype=torch.float)
                     a = [policy(obs_tensor).data.tolist()[0] + 
-                        np.random.normal(scale=0.5)]
+                        np.random.normal(scale=1)]
                 obs_new, r, done, info = env.step(a)
                 eps.append([obs,a,r,obs_new, done])
                 obs = obs_new
             if len(eps) < 999:
                 print('added {} eps, current size {}'.format(added, len(eps)))
                 added += 1
+                update_num += len(eps)
                 buffer.add_many(eps)
     
 
-    for j in range(update_num):
+    for j in range(int(update_num/2)):
         if (j+1) % 100 == 0:
             print('perform {} update'.format(j))
         batch = buffer.sample()
@@ -90,12 +96,8 @@ for k in range(epochs):
         torch.mean(-q_val).backward()
         policy_optim.step()
 
-        for w, w_target in zip(q.parameters(),q_target.parameters()):
-            w_target = rho*w_target + (1-rho)*w
-        for w, w_target in zip(policy.parameters(),policy_target.parameters()):
-            w_target = rho*w_target + (1-rho)*w
-        
-
+        soft_update(policy_target, policy, rho)
+        soft_update(q_target, q, rho)
 
 #%% test
 env = gym.make('MountainCarContinuous-v0')
@@ -109,7 +111,7 @@ for i_episode in range(5):
         obs_tensor = torch.from_numpy(obs.astype('float32'))
         a = policy(obs_tensor)
         a = [a.data.tolist()[0] + 
-                    np.random.normal(scale=1)]
+                    np.random.normal(scale=0.5)]
 #        a = a.data.tolist()
         obs_new, r, done, info = env.step(a)
         obs = obs_new

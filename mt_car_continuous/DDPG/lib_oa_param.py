@@ -25,16 +25,16 @@ class Q(nn.Module):
     def __init__(self,dim_in, action_dim, hidden=100):
         super().__init__()
         self.dim_in = dim_in
-        self.fc1 = nn.Linear(dim_in,hidden)
-        self.fc2 = nn.Linear(hidden+action_dim,hidden)
+        self.fc1 = nn.Linear(dim_in+action_dim,hidden)
+        self.fc2 = nn.Linear(hidden,hidden)
         self.fc3 = nn.Linear(hidden,action_dim)
 
 
     def forward(self,x,a):
+        x = torch.cat((x,a),1)
         x = torch.relu(self.fc1(x))
         # is this the right implementation?
         # concatenate along dimension 1
-        x = torch.cat((x,a),1)
         x = torch.relu(self.fc2(x))
         x = self.fc3(x)
         return x
@@ -64,4 +64,14 @@ class Buffer():
     def sample(self):
         return random.sample(self.arr,self.batch_size)
 
-    
+
+def soft_update(target, source, rho):
+    tau = 1-rho
+    for target_param, param in zip(target.parameters(), source.parameters()):
+        target_param.data.copy_(
+            target_param.data * (1.0 - tau) + param.data * tau
+        )
+
+def hard_update(target, source):
+    for target_param, param in zip(target.parameters(), source.parameters()):
+            target_param.data.copy_(param.data)
