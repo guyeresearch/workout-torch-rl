@@ -19,22 +19,63 @@ class Policy(nn.Module):
         x = torch.relu(self.fc2(x))
         x = torch.tanh(self.fc3(x))
         return x
-#
-#
+
 class Q(nn.Module):
     def __init__(self,dim_in, action_dim, hidden=100):
         super().__init__()
         self.dim_in = dim_in
-        self.fc1 = nn.Linear(dim_in,hidden)
-        self.fc2 = nn.Linear(hidden+action_dim,hidden)
+        self.fc1 = nn.Linear(dim_in+action_dim,hidden)
+        self.fc2 = nn.Linear(hidden,hidden)
         self.fc3 = nn.Linear(hidden,action_dim)
 
 
     def forward(self,x,a):
+        x = torch.cat((x,a),1)
         x = torch.relu(self.fc1(x))
         # is this the right implementation?
         # concatenate along dimension 1
-        x = torch.cat((x,a),1)
+        x = torch.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
+
+
+# # this architecture does not work
+# class Q(nn.Module):
+#     def __init__(self,dim_in, action_dim, hidden=100):
+#         super().__init__()
+#         self.dim_in = dim_in
+#         self.fc1 = nn.Linear(dim_in,hidden)
+#         self.fc2 = nn.Linear(hidden+action_dim,hidden)
+#         self.fc3 = nn.Linear(hidden,action_dim)
+
+
+#     def forward(self,x,a):
+#         x = torch.relu(self.fc1(x))
+#         # is this the right implementation?
+#         # concatenate along dimension 1
+#         x = torch.cat((x,a),1)
+#         x = torch.relu(self.fc2(x))
+#         x = self.fc3(x)
+#         return x
+    
+class Q2(nn.Module):
+    def __init__(self,dim_in, action_dim, hidden=100):
+        super().__init__()
+        self.dim_in = dim_in
+        half_hidden = int(hidden/2)
+        self.fc1 = nn.Linear(dim_in,hidden)
+        self.fc_a = nn.Linear(action_dim,half_hidden )
+        self.fc2 = nn.Linear(hidden+half_hidden,hidden)
+        self.fc3 = nn.Linear(hidden,action_dim)
+
+
+
+    def forward(self,x,a):
+        x = torch.relu(self.fc1(x))
+        y = torch.relu(self.fc_a(a))
+        # is this the right implementation?
+        # concatenate along dimension 1
+        x = torch.cat((x,y),1)
         x = torch.relu(self.fc2(x))
         x = self.fc3(x)
         return x

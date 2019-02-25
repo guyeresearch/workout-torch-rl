@@ -104,14 +104,14 @@ env = gym.make('MountainCarContinuous-v0')
 for i_episode in range(5):
     obs = env.reset()
     
-    for t in range(2000):
+    for t in range(200):
         if (t+1)%100 == 0:
             print(t+1)
         env.render()
         obs_tensor = torch.from_numpy(obs.astype('float32'))
         a = policy(obs_tensor)
         a = [a.data.tolist()[0] + 
-                    np.random.normal(scale=0.5)]
+                    np.random.normal(scale=0.)]
 #        a = a.data.tolist()
         obs_new, r, done, info = env.step(a)
         obs = obs_new

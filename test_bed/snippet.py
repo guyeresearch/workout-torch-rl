@@ -49,3 +49,37 @@ for item in zip(list(val.parameters()),g):
 
 val_optim = optim.Adam(val.parameters(),lr=0.1)
 val_optim.step()
+
+
+
+# twice differential with first differential zero
+x = torch.tensor(2.,requires_grad=True)
+y = torch.tensor(2.,)
+z = (x-y)*(x-y)
+zf = grad(z,x,create_graph=True)
+zf
+# not zero
+zff = grad(zf[0],x)
+
+
+# conjugate gradient algorithm
+import numpy as np
+A = np.array([[4,1],[1,3]])
+b = np.array([1,2])
+x0 = b
+r0 = b-np.dot(A,x0)
+p0 = r0
+rsold = np.dot(r0,r0)
+for i in range(b.shape[0]):
+    Ap0 = np.dot(A,p0)
+    alpha = rsold/np.dot(p0,Ap0)
+    x = x0 + alpha*p0
+    r = r0 - alpha*Ap0
+    rsnew =  np.dot(r,r)
+    if rsnew <= 1e-10:
+        break
+    beta0 = rsnew/rsold
+    p = r + beta0*p0
+    x0, r0, p0, rsold = x, r, p, rsnew
+
+
