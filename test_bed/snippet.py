@@ -55,11 +55,22 @@ val_optim.step()
 # twice differential with first differential zero
 x = torch.tensor(2.,requires_grad=True)
 y = torch.tensor(2.,)
+t = x-y
 z = (x-y)*(x-y)
 zf = grad(z,x,create_graph=True)
 zf
 # not zero
 zff = grad(zf[0],x)
+
+x = torch.tensor(1.,requires_grad=True)
+p = 2*x
+p0 = (2*x).detach()
+p1 = 2*x
+z = torch.pow(p1-p0,2)
+zf = grad(z,x,create_graph=True)
+zff = grad(zf[0],x)
+
+
 
 
 # conjugate gradient algorithm
@@ -83,3 +94,21 @@ for i in range(b.shape[0]):
     x0, r0, p0, rsold = x, r, p, rsnew
 
 
+def generate():
+    x = [1,2,3]
+    i = 0
+    for t in x:
+        yield t
+        i += 1
+    print(i)
+
+
+# test vanilla SGD
+x = torch.tensor(2.,requires_grad=True)
+y = torch.tensor(3.,requires_grad=True)
+xy_optim = optim.SGD([x,y],lr=1)
+
+xy_optim.zero_grad()
+loss = -x*y
+loss.backward()
+xy_optim.step()
