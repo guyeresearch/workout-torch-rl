@@ -112,3 +112,15 @@ xy_optim.zero_grad()
 loss = -x*y
 loss.backward()
 xy_optim.step()
+
+
+#test stack
+x = torch.tensor(2.,requires_grad=True)
+a = x*2
+b = x*3
+a.backward()
+b.backward()
+
+s = torch.stack((a,b))
+loss = s.sum()
+loss.backward()

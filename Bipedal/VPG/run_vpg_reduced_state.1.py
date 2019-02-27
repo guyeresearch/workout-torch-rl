@@ -56,7 +56,7 @@ for k in range(epochs):
             obs_new, r, done, info = env.step(a.data.tolist())
             obs_new = obs_new[:14]
             if r < -90:
-                r = -15
+                r = -10
             eps.append([obs,a,r,logp,obs_new])
             obs = obs_new
             i += 1
@@ -86,7 +86,7 @@ for k in range(epochs):
         v_loss.backward()
         val_optim.step()
 
-
+    break
     #fit policy simple
     scalar = D_size
     obsx = []
@@ -103,7 +103,10 @@ for k in range(epochs):
         logp = torch.stack(logp)
         obs_new = torch.tensor(obs_new,dtype=torch.float)
         
-        delta = (gamma*val(obs_new) + r - val(obs))[0].detach()
+#        # this is wrong!! understand the broadcast rule: 3x1 + 3 matrix
+#        # yields 3x3 matrix
+#        delta = (gamma*val(obs_new) + r - val(obs))[0].detach()
+        delta = (gamma*val(obs_new)[:,0] + r - val(obs)[:,0]).detach()
         delta_cum = []
         running = 0
         # torch does not support negative idx yet
