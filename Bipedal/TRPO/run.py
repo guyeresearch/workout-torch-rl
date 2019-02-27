@@ -14,7 +14,7 @@ obs_dim = 14
 action_dim = 4
 
 # parameters
-epochs = 500
+epochs = 900
 D_size = 10
 gamma = 0.98
 lda = 0.97 # for generalized advantage esitmate
@@ -31,8 +31,8 @@ val_lr = 1e-3
 policy_lr = 1
 
 
-policy = Policy(obs_dim,action_dim)
-val = Val(obs_dim)
+policy = Policy(obs_dim,action_dim,200)
+val = Val(obs_dim,200)
 paramReshape = ParamReshape(policy)
 
 val_optim = optim.Adam(val.parameters(), lr=val_lr)
@@ -42,7 +42,8 @@ policy_optim = optim.SGD(policy.parameters(),lr=policy_lr)
 std = 1
 eps_lens = []
 env = gym.make('BipedalWalker-v2')
-for k in range(epochs):
+#%%
+for k in range(epochs)[800:]:
     print('epoch: {}, std: {}'.format(k,std))
     # collect D
     D = []
@@ -63,7 +64,7 @@ for k in range(epochs):
             obs_new, r, done, info = env.step(a.data.tolist())
             obs_new = obs_new[:14]
             if r < -90:
-                r = -10
+                r = -30
             eps.append([obs,a,r,logp,obs_new])
             obs = obs_new
             i += 1
@@ -193,6 +194,7 @@ for k in range(epochs):
     x_kl_param = paramReshape.vec2param(x_kl)
 
     # line search
+    # does it require all obs to compute L?
     for k in range(K):
         for w,item in zip(policy.parameters(),x_kl_param):
             w.grad = -item
@@ -251,5 +253,5 @@ for i_episode in range(5):
         r_total += r
     print('points: {}'.format(r_total))
 #%%
-#torch.save(policy.state_dict(), 'policy_vpg_100hid_310.pkl')
-#torch.save(val.state_dict(), 'val_vpg_100hid_310.pkl')
+torch.save(policy.state_dict(), 'policy_vpg_100hid_288.pkl')
+torch.save(val.state_dict(), 'val_vpg_100hid_288.pkl')

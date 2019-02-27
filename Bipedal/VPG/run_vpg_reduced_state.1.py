@@ -35,7 +35,7 @@ policy_optim = optim.Adam(policy.parameters(),lr=policy_lr)
 std = 0.6
 eps_lens = []
 env = gym.make('BipedalWalker-v2')
-for k in range(epochs):
+for k in range(epochs)[600:]:
     print('epoch: {}, std: {}'.format(k,std))
     # collect D
     D = []
@@ -86,7 +86,7 @@ for k in range(epochs):
         v_loss.backward()
         val_optim.step()
 
-    break
+
     #fit policy simple
     scalar = D_size
     obsx = []
