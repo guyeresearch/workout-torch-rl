@@ -1,7 +1,7 @@
 import gym
 import numpy as np
 import torch
-from model_vpg import Policy, Val
+from model_vpg_small import Policy, Val
 import qn
 import torch.nn.functional as F
 from torch import nn, optim
@@ -14,7 +14,7 @@ obs_dim = 14
 action_dim = 4
 
 # parameters
-epochs = 500
+epochs = 600
 D_size = 10
 gamma = 0.98
 lda = 0.97 # for generalized advantage esitmate
@@ -32,7 +32,7 @@ val_optim = optim.Adam(val.parameters(), lr=val_lr)
 policy_optim = optim.Adam(policy.parameters(),lr=policy_lr)
 
 #%%
-std = 0.7
+std = 0.6
 eps_lens = []
 env = gym.make('BipedalWalker-v2')
 for k in range(epochs):
