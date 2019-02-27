@@ -96,6 +96,7 @@ for k in range(epochs):
     
     # rewrite policy step for easy logp esitmate in line search
     # check this new implementation to see if it works in vpg. DONE
+    #fit policy simple
     scalar = D_size
     obsx = []
     ax = []
@@ -111,7 +112,10 @@ for k in range(epochs):
         logp = torch.stack(logp)
         obs_new = torch.tensor(obs_new,dtype=torch.float)
         
-        delta = (gamma*val(obs_new) + r - val(obs))[0].detach()
+#        # this is wrong!! understand the broadcast rule: 3x1 + 3 matrix
+#        # yields 3x3 matrix
+#        delta = (gamma*val(obs_new) + r - val(obs))[0].detach()
+        delta = (gamma*val(obs_new)[:,0] + r - val(obs)[:,0]).detach()
         delta_cum = []
         running = 0
         # torch does not support negative idx yet
