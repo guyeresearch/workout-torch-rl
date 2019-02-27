@@ -42,7 +42,8 @@ class ParamReshape():
         self.shapes = [x.shape for x in model.parameters()]
     
     def param2vec(self,params):
-        return torch.cat([x.view(-1) for x in params])
+        return torch.cat([x.contiguous().view(-1) 
+            for x in params])
 
     def vec2param(self,vec):
         pointer = 0

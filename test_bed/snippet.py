@@ -124,3 +124,14 @@ b.backward()
 s = torch.stack((a,b))
 loss = s.sum()
 loss.backward()
+
+# test cat parameters
+w = torch.tensor([2.,3.],requires_grad=True)
+w1 = torch.tensor([4.],requires_grad=True)
+x = torch.tensor([1.,1.])
+z = torch.dot(w,x)+w1
+wcat = torch.cat((w,w1))
+#d1 = grad(z,(w,w1))
+d1 = grad(z,(w.view(-1),w1))
+
+d1 = grad(z,wcat)

@@ -14,15 +14,16 @@ obs_dim = 14
 action_dim = 4
 
 # parameters
-epochs = 900
+epochs = 500
 D_size = 10
 gamma = 0.98
 lda = 0.97 # for generalized advantage esitmate
 
 # check paper
-delta = 0.01 # as in paper
+constrain = 0.01 # as in paper
 K = 20
 alpha = 0.8
+cg_iters = 10 #according to paper C.1 section only need 10 iterations 
 
 val_epochs = 5
 val_lr = 1e-3
@@ -38,7 +39,7 @@ val_optim = optim.Adam(val.parameters(), lr=val_lr)
 policy_optim = optim.SGD(policy.parameters(),lr=policy_lr)
 
 #%%
-std = 0.6
+std = 1
 eps_lens = []
 env = gym.make('BipedalWalker-v2')
 for k in range(epochs):
@@ -70,7 +71,7 @@ for k in range(epochs):
         D.append(eps)
     eps_lens.append(np.mean([len(x) for x in D]))
     if (k+1) % 100 == 0:
-        std = std if std <= 0.3 else std*0.9
+        std = std if std <= 0.3 else std*0.8
 
 
 
@@ -140,33 +141,42 @@ for k in range(epochs):
     L_old = (logp*delta_cum/scalar).sum()
     L_old.backward()
     
+    # subsample only 10% for cg calculation as described in paper C.1
+    idx = np.random.randint(obs.shape[0],size=int(obs.shape[0]*0.1))
+    sub_obs = obs[idx,:]
     var = std*std
-    m0 = policy(obs).detach()
-    m1 = policy(obs)
+    m0 = policy(sub_obs).detach()
+    m1 = policy(sub_obs)
     # Gaussian kl for constant and same std in all dims
-    kl = torch.sum(torch.pow((m1-m0),2)/2/var,axis=1).mean()
-    p_vec = paramReshape.param2vec(policy.parameters())
+    kl = torch.sum(torch.pow((m1-m0),2)/2/var,dim=1).mean()
     # d1 is the first derivative of kl wrt policy param.
-    d1_vec = grad(kl,p_vec,create_graph=True)
+    d1 = grad(kl,policy.parameters(),create_graph=True)
+    d1_vec = paramReshape.param2vec(d1)
     g = [x.grad for x in policy.parameters()]
     g_vec = paramReshape.param2vec(g)
-
+    
     # conjugate_gradient
     # compute x for Hx = g 
     # only d1_vec and p_vec has graph. all gradients has no graph.
     b = g_vec
     # TODO other choices of x0 ??
     x0 = g_vec
-    Hx0 = grad(torch.dot(d1_vec,x0),p_vec)
+    # retain_graph ???
+    Hx0 = grad(torch.dot(d1_vec,x0),policy.parameters(), retain_graph=True)
+    Hx0 = paramReshape.param2vec(Hx0)
     r0 = b-Hx0
     p0 = r0
-    rsold = torch.dot(r0,r0)
-    for i in range(b.shape[0]):
-        Hp0 = grad(torch.dot(d1_vec,p0),p_vec)
+    # torch.dot has bug. I am trying to update python and numpy to see if can
+    # slove the problem.
+    rsold = torch.dot(r0,r0) #???error
+    for j in range(cg_iters):
+        Hp0 = grad(torch.dot(d1_vec,p0),policy.parameters(), retain_graph=True)
+        Hp0 = paramReshape.param2vec(Hp0)
         alpha_cg = rsold/torch.dot(p0,Hp0)
         x = x0 + alpha_cg*p0
         r = r0 - alpha_cg*Hp0
         rsnew = torch.dot(r,r)
+        print(j,rsnew)
         if rsnew <= 1e-10:
             break
         beta_cg = rsnew/rsold
@@ -174,15 +184,16 @@ for k in range(epochs):
         x0, r0, p0, rsold = x, r, p, rsnew
     # x is the result gradient (1/H)*g
 
-    Hx = grad(torch.dot(d1_vec,x),p_vec)
+    Hx = grad(torch.dot(d1_vec,x),policy.parameters())
+    Hx = paramReshape.param2vec(Hx)
     xHx = torch.dot(x,Hx)
-    beta = torch.sqrt(2*delta/xHx)
+    beta = torch.sqrt(2*constrain/xHx)
     # x that satisfies kl divergence
     x_kl = beta*x
     x_kl_param = paramReshape.vec2param(x_kl)
 
     # line search
-    for _ in range(K):
+    for k in range(K):
         for w,item in zip(policy.parameters(),x_kl_param):
             w.grad = -item
         policy_optim.step()
@@ -190,6 +201,7 @@ for k in range(epochs):
         dbu = Normal(mean,std)
         logp = torch.sum(dbu.log_prob(a),dim=1)
         L = (logp*delta_cum/scalar).sum()
+        print(k, L, L_old)
         if L > L_old:
             break
         else:
