@@ -31,8 +31,8 @@ val_lr = 1e-3
 policy_lr = 1
 
 
-policy = Policy(obs_dim,action_dim,200)
-val = Val(obs_dim,200)
+policy = Policy(obs_dim,action_dim)
+val = Val(obs_dim)
 paramReshape = ParamReshape(policy)
 
 val_optim = optim.Adam(val.parameters(), lr=val_lr)
@@ -43,7 +43,7 @@ std = 1
 eps_lens = []
 env = gym.make('BipedalWalker-v2')
 #%%
-for k in range(epochs)[800:]:
+for k in range(epochs):
     print('epoch: {}, std: {}'.format(k,std))
     # collect D
     D = []
@@ -72,7 +72,7 @@ for k in range(epochs)[800:]:
         D.append(eps)
     eps_lens.append(np.mean([len(x) for x in D]))
     if (k+1) % 100 == 0:
-        std = std if std <= 0.3 else std*0.8
+        std = std if std <= 0.3 else std*0.85
 
 
 
@@ -156,12 +156,14 @@ for k in range(epochs)[800:]:
     g = [x.grad for x in policy.parameters()]
     g_vec = paramReshape.param2vec(g)
     
+    break
     # conjugate_gradient
     # compute x for Hx = g 
     # only d1_vec and p_vec has graph. all gradients has no graph.
     b = g_vec
-    # TODO other choices of x0 ??
-    x0 = g_vec
+#    # TODO other choices of x0 ?? CHANGE TO SMALL VALUE VEC
+#    x0 = g_vec
+    x0 = torch.ones(b.shape)*torch.tensor(1e-3,dtype=torch.float)
     # retain_graph ???
     Hx0 = grad(torch.dot(d1_vec,x0),policy.parameters(), retain_graph=True)
     Hx0 = paramReshape.param2vec(Hx0)

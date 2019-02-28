@@ -9,9 +9,9 @@ import numpy as np
 class Policy(nn.Module):
     def __init__(self,dim_in, dim_out):
         super().__init__()
-        self.fc1 = nn.Linear(dim_in,100)
-        self.fc2 = nn.Linear(100,100)
-        self.fc3 = nn.Linear(100,dim_out)
+        self.fc1 = nn.Linear(dim_in,200)
+        self.fc2 = nn.Linear(200,200)
+        self.fc3 = nn.Linear(200,dim_out)
 
 
     def forward(self,x):
@@ -25,9 +25,9 @@ class Val(nn.Module):
     def __init__(self,dim_in):
         super().__init__()
         self.dim_in = dim_in
-        self.fc1 = nn.Linear(dim_in,100)
-        self.fc2 = nn.Linear(100,100)
-        self.fc3 = nn.Linear(100,1)
+        self.fc1 = nn.Linear(dim_in,200)
+        self.fc2 = nn.Linear(200,200)
+        self.fc3 = nn.Linear(200,1)
 
 
     def forward(self,x):
