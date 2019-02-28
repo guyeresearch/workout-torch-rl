@@ -28,22 +28,18 @@ cg_iters = 10 #according to paper C.1 section only need 10 iterations
 val_epochs = 5
 val_lr = 1e-3
 
-policy_lr = 1
-
-
 policy = Policy(obs_dim,action_dim)
 val = Val(obs_dim)
 paramReshape = ParamReshape(policy)
 
 val_optim = optim.Adam(val.parameters(), lr=val_lr)
-policy_optim = optim.SGD(policy.parameters(),lr=policy_lr)
 
 #%%
 std = 1
 eps_lens = []
 env = gym.make('BipedalWalker-v2')
 #%%
-for k in range(epochs):
+for k in range(epochs)[351:]:
     print('epoch: {}, std: {}'.format(k,std))
     # collect D
     D = []
@@ -64,7 +60,7 @@ for k in range(epochs):
             obs_new, r, done, info = env.step(a.data.tolist())
             obs_new = obs_new[:14]
             if r < -90:
-                r = -30
+                r = -10
             eps.append([obs,a,r,logp,obs_new])
             obs = obs_new
             i += 1
@@ -138,7 +134,9 @@ for k in range(epochs):
     delta_cum = torch.cat(delta_cumx)
     
     # positive or negative???? should be positive since we want g
-    policy_optim.zero_grad()
+    for item in policy.parameters():
+        if item.grad is not None:
+            item.grad.data.zero_()
     L_old = (logp*delta_cum/scalar).sum()
     L_old.backward()
     
@@ -156,14 +154,14 @@ for k in range(epochs):
     g = [x.grad for x in policy.parameters()]
     g_vec = paramReshape.param2vec(g)
     
-    break
+    
     # conjugate_gradient
     # compute x for Hx = g 
     # only d1_vec and p_vec has graph. all gradients has no graph.
     b = g_vec
 #    # TODO other choices of x0 ?? CHANGE TO SMALL VALUE VEC
 #    x0 = g_vec
-    x0 = torch.ones(b.shape)*torch.tensor(1e-3,dtype=torch.float)
+    x0 = torch.zeros(b.shape,dtype=torch.float) #spinningup choice
     # retain_graph ???
     Hx0 = grad(torch.dot(d1_vec,x0),policy.parameters(), retain_graph=True)
     Hx0 = paramReshape.param2vec(Hx0)
@@ -193,26 +191,33 @@ for k in range(epochs):
     beta = torch.sqrt(2*constrain/xHx)
     # x that satisfies kl divergence
     x_kl = beta*x
-    x_kl_param = paramReshape.vec2param(x_kl)
-
+    # generator fails has to be list. weird error
+    x_kl_param = list(paramReshape.vec2param(x_kl))
+    
     # line search
-    # does it require all obs to compute L?
+    # does it require all obs to compute L
+    m0 = policy(obs).detach()
+    old_params = [x.data for x in policy.parameters()]
+    satisfy = False
     for k in range(K):
-        for w,item in zip(policy.parameters(),x_kl_param):
-            w.grad = -item
-        policy_optim.step()
+        for w,w_old,item in zip(policy.parameters(), old_params, x_kl_param):
+            w.data = w_old + item
         mean = policy(obs)
         dbu = Normal(mean,std)
         logp = torch.sum(dbu.log_prob(a),dim=1)
         L = (logp*delta_cum/scalar).sum()
-        print(k, L, L_old)
-        if L > L_old:
+        kl = torch.sum(torch.pow((mean-m0),2)/2/var,dim=1).mean()
+        print(k, L.data.tolist(), L_old.data.tolist(), kl.data.tolist())
+        if L > L_old and kl < constrain:
+            satisfy = True
             break
         else:
-            for w in policy.parameters():
-                w.grad = -w.grad
-            policy_optim.step()
-            x_kl_param = [alpha*x for x in x_kl_param]
+            x_kl_param = [alpha*x.data for x in x_kl_param]
+    
+    if not satisfy:
+        print('not satisfy, keep old params')
+        for w, w_old in zip(policy.parameters(), old_params):
+                w.data = w_old
 
 #%%
 import matplotlib.pyplot as plt
