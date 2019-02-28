@@ -94,6 +94,7 @@ for i in range(b.shape[0]):
     x0, r0, p0, rsold = x, r, p, rsnew
 
 
+# test generator
 def generate():
     x = [1,2,3]
     i = 0
@@ -101,6 +102,9 @@ def generate():
         yield t
         i += 1
     print(i)
+
+t = generate()
+t = [x for x in t]
 
 
 # test vanilla SGD
