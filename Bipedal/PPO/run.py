@@ -14,12 +14,13 @@ obs_dim = 14
 action_dim = 4
 
 # parameters
-epochs = 900
+epochs = 500
 D_size = 10
 gamma = 0.99
-lda = 0.97 # for generalized advantage esitmate
+lda = 0.95 # according to paper
 
-constrain = 0.1 # according to paper
+constrain = 0.2 # according to paper
+update_steps = 5
 
 EPS = 1e-8
 
@@ -40,7 +41,7 @@ std = 1
 eps_lens = []
 env = gym.make('BipedalWalker-v2')
 #%%
-for k in range(epochs):
+for k in range(epochs)[413:]:
     print('epoch: {}, std: {}'.format(k,std))
     # collect D
     D = []
@@ -61,7 +62,7 @@ for k in range(epochs):
             obs_new, r, done, info = env.step(a.data.tolist())
             obs_new = obs_new[:14]
             if r < -90:
-                r = -30
+                r = -10
             eps.append([obs,a,r,logp,obs_new])
             obs = obs_new
             i += 1
@@ -69,7 +70,7 @@ for k in range(epochs):
         D.append(eps)
     eps_lens.append(np.mean([len(x) for x in D]))
     if (k+1) % 100 == 0:
-        std = std if std <= 0.3 else std*0.85
+        std = std if std <= 0.3 else std*0.7
 
 
 
@@ -134,21 +135,25 @@ for k in range(epochs):
     obs_new = torch.cat(obs_newx)
     delta_cum = torch.cat(delta_cumx)
     
-    break
+#    break
     
-    # is this right implementation?
     logp_k = logp.detach()
-    p_ratio = torch.exp(logp-logp_k)
-    left = p_ratio*delta_cum
+    for i in range(update_steps):
+        if i>0:
+            mean = policy(obs)
+            dbu = Normal(mean,std)
+            logp = torch.sum(dbu.log_prob(a),dim=1)
+        p_ratio = torch.exp(logp-logp_k)
+        left = p_ratio*delta_cum
     
-    indicator = torch.tensor(delta_cum>0,dtype=torch.float)*(1+constrain) + \
-        torch.tensor(delta_cum<0,dtype=torch.float)*(1-constrain)
-    right = indicator*delta_cum
+        indicator = torch.tensor(delta_cum>0,dtype=torch.float)*(1+constrain) + \
+            torch.tensor(delta_cum<0,dtype=torch.float)*(1-constrain)
+        right = indicator*delta_cum
     
-    L, _ = torch.min(torch.stack((left,right)),dim=0)
-    policy_optim.zero_grad()
-    (-L).backward()
-    policy_optim.step()
+        L, _ = torch.min(torch.stack((left,right)),dim=0)
+        policy_optim.zero_grad()
+        (-L.mean()).backward()
+        policy_optim.step()
     
     
 
@@ -183,7 +188,9 @@ for i_episode in range(5):
         a = dbu.sample()
             #g = grad(obj,policy.parameters())
 #        obs_new, r, done, info = env.step(a.data.tolist())
-        obs_new, r, done, info = env.step(mean.data.tolist())
+#        obs_new, r, done, info = env.step(mean.data.tolist())
+        a = env.action_space.sample()
+        obs_new, r, done, info = env.step(a)
 #        action_explore = np.clip(action + noise(action),-1,1)
 #        print(done)
         #history.append([obs,action[0],reward,obs_new])
@@ -193,5 +200,5 @@ for i_episode in range(5):
         r_total += r
     print('points: {}'.format(r_total))
 #%%
-torch.save(policy.state_dict(), 'policy_vpg_100hid_288.pkl')
-torch.save(val.state_dict(), 'val_vpg_100hid_288.pkl')
+torch.save(policy.state_dict(), 'policy_PPO_constrain_0.1_300.pkl')
+torch.save(val.state_dict(), 'val_PPO_constrain_0.1_300.pkl')
