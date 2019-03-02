@@ -1,5 +1,5 @@
 # Practice Reinforcement Learning with PyTorch
-The code is orgnized based on the OpenAI gym environments. Each solver generally consists of two files: model.py/lib.py and run.py. They are self-contained and do not depend on other py files to run.
+The code is orgnized based on the OpenAI gym environments. Each solver should consists of two files: model.py/lib.py and run.py. They are self-contained and do not depend on other py files to run.
 
 model.py/lib.py contains the model definitions and some util functions. run.py is the script that runs the model in the gym envrionments. It has three sections: hyperparameters and initilization, training loop and evaluation loop. 
 
