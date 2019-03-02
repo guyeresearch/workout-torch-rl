@@ -7,7 +7,7 @@ I usually run the run.py in Spyder IDE which supports section-based execution. S
 
 ### Current progress is as following:
 
-CartPole-v1:
+###### CartPole-v1:
 
 VPG (Binomial policy)
 
@@ -16,7 +16,7 @@ VPG (Categorical policy)
 
 
 
-MountainCarContinuous-v0:
+###### MountainCarContinuous-v0:
 
 VPG (not working)
 
@@ -27,7 +27,7 @@ DDPG
 
 
 
-BipedalWalker-v2:
+###### BipedalWalker-v2:
 
 VPG (Gaussian Policy)
 
