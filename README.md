@@ -6,9 +6,13 @@ model.py/lib.py contains the model definitions and some util functions. run.py i
 I usually run the run.py in Spyder IDE which supports section-based execution. So after running the training loop, I can run the evaluation loop and visuliaze and evaluate the model.
 
 Current progress is as following:
+
 CartPole-v1:
-VPG (binomial policy)
-VPG (categorical policy)
+
+VPG (Binomial policy)
+
+VPG (Categorical policy)
+
 
 MountainCarContinuous-v0:
 VPG (not working)
