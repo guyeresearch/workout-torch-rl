@@ -20,7 +20,8 @@ gamma = 0.99
 lda = 0.95 # according to paper
 
 constrain = 0.2 # according to paper
-update_steps = 5
+update_steps = 80
+target_kl = 0.01
 
 EPS = 1e-8
 
@@ -37,7 +38,7 @@ val_optim = optim.Adam(val.parameters(), lr=val_lr)
 policy_optim = optim.Adam(policy.parameters(),lr=policy_lr)
 
 #%%
-std = 1
+std = 1.
 eps_lens = []
 env = gym.make('BipedalWalker-v2')
 #%%
@@ -138,6 +139,8 @@ for k in range(epochs)[413:]:
 #    break
     
     logp_k = logp.detach()
+    mean_k = policy(obs).detach()
+    var = std*std
     for i in range(update_steps):
         if i>0:
             mean = policy(obs)
@@ -154,6 +157,14 @@ for k in range(epochs)[413:]:
         policy_optim.zero_grad()
         (-L.mean()).backward()
         policy_optim.step()
+
+        if i > 0:
+            kl = torch.sum(torch.pow((mean-mean_k),2)/2/var,dim=1).mean()
+            if kl > 1.5*target_kl:
+                print('early stopping at step {} with kl {}'.format(i,kl.data.tolist()))
+                break
+        
+        
     
     
 
