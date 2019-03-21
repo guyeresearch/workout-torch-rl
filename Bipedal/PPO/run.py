@@ -42,7 +42,7 @@ std = 1.
 eps_lens = []
 env = gym.make('BipedalWalker-v2')
 #%%
-for k in range(epochs)[413:]:
+for k in range(epochs):
     print('epoch: {}, std: {}'.format(k,std))
     # collect D
     D = []
@@ -63,7 +63,7 @@ for k in range(epochs)[413:]:
             obs_new, r, done, info = env.step(a.data.tolist())
             obs_new = obs_new[:14]
             if r < -90:
-                r = -10
+                r = -15
             eps.append([obs,a,r,logp,obs_new])
             obs = obs_new
             i += 1
@@ -149,8 +149,8 @@ for k in range(epochs)[413:]:
         p_ratio = torch.exp(logp-logp_k)
         left = p_ratio*delta_cum
     
-        indicator = torch.tensor(delta_cum>0,dtype=torch.float)*(1+constrain) + \
-            torch.tensor(delta_cum<0,dtype=torch.float)*(1-constrain)
+        indicator = (delta_cum>0).float()*(1+constrain) + \
+            (delta_cum<0).float()*(1-constrain)
         right = indicator*delta_cum
     
         L, _ = torch.min(torch.stack((left,right)),dim=0)
