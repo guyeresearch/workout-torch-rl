@@ -16,8 +16,8 @@ import sys
 obs_dim = 14
 action_dim = 4
 
-init_eps = 30
-epochs = 500
+init_eps = 20
+epochs = 1000
 
 batch_size = 100
 buffer_max = 1e6
@@ -47,7 +47,7 @@ q2_optim = optim.Adam(q2.parameters(), lr=q_lr)
 
 buffer = Buffer(batch_size,buffer_max)
 
-min_r = 15
+min_r = -100
 # initialization
 env = gym.make('BipedalWalker-v2')
 for i in range(init_eps):
@@ -62,6 +62,7 @@ for i in range(init_eps):
         buffer.add([obs,a,r,obs_new[:14], done])
         obs = obs_new[:14]
 
+#%%
 std = 1
 for k in range(epochs):
     print('epoch {}'.format(k))
@@ -83,7 +84,14 @@ for k in range(epochs):
         buffer.add([obs,a,r,obs_new[:14], done])
         obs = obs_new[:14]
         
-        if t > 300:
+#        if done:
+#            for i in range(100):
+#                buffer.add([obs,a,r,obs_new[:14], done])
+#        
+#        break
+        
+        if t > 500:
+            # train at most 300 steps for each episode
             t += 1
             continue
         # training
@@ -132,25 +140,43 @@ for k in range(epochs):
                 w_target.data = rho*w_target.data + (1-rho)*w.data
 
         t += 1
-
+        
+#        break
     print('end in {} steps'.format(t))
-    if (k+1) % 50 == 0:
-        std = std if std <= 0.3 else std*0.8
-    
+    if (k+1) % 100 == 0:
+        std = std if std <= 0.3 else std*0.9
+#    break
 #%% test
-#env = gym.make('MountainCarContinuous-v0')
-#for i_episode in range(5):
-#    obs = env.reset()
-#    
-#    for t in range(2000):
-#        if (t+1)%100 == 0:
-#            print(t+1)
-#        env.render()
-#        obs_tensor = torch.from_numpy(obs.astype('float32'))
-#        a = policy(obs_tensor)
-#        a = [a.data.tolist()[0] + 
-#                    np.random.normal(scale=1)]
-##        a = a.data.tolist()
-#        obs_new, r, done, info = env.step(a)
-#        obs = obs_new
-#
+env = gym.make('BipedalWalker-v2')
+for i_episode in range(5):
+    obs = env.reset()
+    obs = obs[:14]
+    t = 0
+    r_total = 0
+    done = False
+    while not done and t<2000:
+        if (t+1)%100 == 0:
+            print(t+1)
+        env.render()
+        obs_tensor = torch.from_numpy(obs.astype('float32'))
+#        obs_tensor[-10:] = 0
+        mean = policy(obs_tensor)
+#            print(p)
+        dbu = Normal(mean,std)
+        a = dbu.sample()
+            #g = grad(obj,policy.parameters())
+#        obs_new, r, done, info = env.step(a.data.tolist())
+        obs_new, r, done, info = env.step(mean.data.tolist())
+#        action_explore = np.clip(action + noise(action),-1,1)
+#        print(done)
+        #history.append([obs,action[0],reward,obs_new])
+        obs_new = obs_new[:14]
+        obs = obs_new
+        t += 1
+        r_total += r
+    print('points: {}'.format(r_total))
+
+
+#torch.save(policy.state_dict(), 'policy_td3_normal_walking_mid_trainx.pkl')
+#torch.save(q.state_dict(), 'q_td3_normal_walking_mid_trainx.pkl')
+#torch.save(q2.state_dict(), 'q2_td3_normal_walking_mid_trainx.pkl')
