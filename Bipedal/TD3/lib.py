@@ -26,7 +26,7 @@ class Q(nn.Module):
         self.dim_in = dim_in
         self.fc1 = nn.Linear(dim_in+action_dim,hidden)
         self.fc2 = nn.Linear(hidden,hidden)
-        self.fc3 = nn.Linear(hidden,action_dim)
+        self.fc3 = nn.Linear(hidden,1)
 
 
     def forward(self,x,a):
@@ -66,7 +66,7 @@ class Q2(nn.Module):
         self.fc1 = nn.Linear(dim_in,hidden)
         self.fc_a = nn.Linear(action_dim,half_hidden )
         self.fc2 = nn.Linear(hidden+half_hidden,hidden)
-        self.fc3 = nn.Linear(hidden,action_dim)
+        self.fc3 = nn.Linear(hidden,1)
 
 
 
@@ -94,7 +94,7 @@ class Buffer():
             self.arr.append(trans)
             self.pointer += 1
         else:
-            idx = self.pointer % self.max
+            idx = int(self.pointer % self.max)
             self.arr[idx] = trans
             self.pointer += 1
     

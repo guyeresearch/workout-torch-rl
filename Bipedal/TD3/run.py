@@ -63,7 +63,8 @@ for i in range(init_eps):
         obs = obs_new[:14]
 
 #%%
-std = 1
+#std = 1
+std = 0.1
 for k in range(epochs):
     print('epoch {}'.format(k))
     t = 1
@@ -141,11 +142,11 @@ for k in range(epochs):
 
         t += 1
         
-#        break
+        break
     print('end in {} steps'.format(t))
     if (k+1) % 100 == 0:
         std = std if std <= 0.3 else std*0.9
-#    break
+    break
 #%% test
 env = gym.make('BipedalWalker-v2')
 for i_episode in range(5):
