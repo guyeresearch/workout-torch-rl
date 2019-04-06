@@ -14,6 +14,18 @@ import qn
 import torch.nn.functional as F
 from torch import nn, optim
 from torch.autograd import grad
+from torch.distributions.normal import Normal
+
+x = torch.tensor([[1,2],[3,4]],dtype=torch.float)
+std = torch.tensor([[1,1],[1,1]], dtype=torch.float)
+s = torch.tensor([[1,2],[3,4],[5,6]], dtype=torch.float)
+
+dbu = Normal(x,std)
+a = dbu.sample()
+
+dbu.log_prob(a)
+
+
 
 
 # test set grad.

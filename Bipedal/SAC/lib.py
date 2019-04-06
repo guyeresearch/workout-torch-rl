@@ -10,15 +10,22 @@ class Policy(nn.Module):
     def __init__(self,dim_in, dim_out, hidden=100):
         super().__init__()
         self.fc1 = nn.Linear(dim_in,hidden)
-        self.fc2 = nn.Linear(hidden,hidden)
-        self.fc3 = nn.Linear(hidden,dim_out)
+
+        self.fc2_mean = nn.Linear(hidden,hidden)
+        self.fc3_mean = nn.Linear(hidden,dim_out)
+
+        self.fc2_std = nn.Linear(hidden,hidden)
+        self.fc3_std = nn.Linear(hidden,dim_out)
 
 
     def forward(self,x):
         x = torch.relu(self.fc1(x))
-        x = torch.relu(self.fc2(x))
-        x = torch.tanh(self.fc3(x))
-        return x
+        x_mean = torch.relu(self.fc2_mean(x))
+        x_mean = torch.tanh(self.fc3_mean(x_mean))
+
+        x_std = torch.relu(self.fc2_std(x))
+        x_std = self.fc3_std(x_std)
+        return x_mean, x_std
 
 class Q(nn.Module):
     def __init__(self,dim_in, action_dim, hidden=100):
@@ -53,30 +60,6 @@ class V(nn.Module):
         x = self.fc3(x)
         return x
 
-
-    
-# class Q2(nn.Module):
-#     def __init__(self,dim_in, action_dim, hidden=100):
-#         super().__init__()
-#         self.dim_in = dim_in
-#         half_hidden = int(hidden/2)
-#         self.fc1 = nn.Linear(dim_in,hidden)
-#         self.fc_a = nn.Linear(action_dim,half_hidden )
-#         self.fc2 = nn.Linear(hidden+half_hidden,hidden)
-#         self.fc3 = nn.Linear(hidden,action_dim)
-
-
-
-#     def forward(self,x,a):
-#         x = torch.relu(self.fc1(x))
-#         y = torch.relu(self.fc_a(a))
-#         # is this the right implementation?
-#         # concatenate along dimension 1
-#         x = torch.cat((x,y),1)
-#         x = torch.relu(self.fc2(x))
-#         x = self.fc3(x)
-#         return x
-# #
 
 
 class Buffer():
