@@ -5,6 +5,11 @@ import torch.nn.functional as F
 import qn
 import random
 
+# OpenAI param but they did not use clip to force
+# logstd being within the range
+MIN_LOG_STD = -20
+MAX_LOG_STD = 2
+
 # simple three layers
 class Policy(nn.Module):
     def __init__(self,dim_in, dim_out, hidden=100):
@@ -25,6 +30,9 @@ class Policy(nn.Module):
 
         x_std = torch.relu(self.fc2_std(x))
         x_std = self.fc3_std(x_std)
+        # clamp log std
+        x_std = torch.clamp(x_std,MIN_LOG_STD,MAX_LOG_STD)
+        x_std = torch.exp(x_std)
         return x_mean, x_std
 
 class Q(nn.Module):

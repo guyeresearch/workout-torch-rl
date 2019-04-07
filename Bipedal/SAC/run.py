@@ -22,22 +22,24 @@ epochs = 1000
 train_steps = 1000
 
 
-batch_size = 100
+batch_size = 256
 buffer_max = 1e6
 
 # check paper. Action smooth parameter
-c = 0.5
+# c = 0.5
 # check paper for entropy param
-alpha = 0.1
+# paper uses reward scaling of 5 for simple environments
+# which is equivalent to an alpha of 0.2
+alpha = 0.2
 
 gamma = 0.99
 rho = 0.995
 
-q_lr = 1e-3
-policy_lr = 1e-3
-v_lr = 1e-3
-policy_delay = 2
+q_lr = 3e-4
+policy_lr = 3e-4
+v_lr = 3e-4
 
+# check OpenAI implementation of policy network
 policy = Policy(obs_dim,action_dim,200)
 q = Q(obs_dim,action_dim,200)
 q2 = Q(obs_dim,action_dim,200)
@@ -57,6 +59,8 @@ min_r = -100
 # initialization
 env = gym.make('BipedalWalker-v2')
 obs = env.reset()
+obs = obs[:14]
+eps_len = 0
 for i in range(init_steps):
     a = env.action_space.sample()
     obs_new, r, done, info = env.step(a)
@@ -64,24 +68,26 @@ for i in range(init_steps):
         r = min_r
     buffer.add([obs,a,r,obs_new[:14], done])
     obs = obs_new[:14]
+    eps_len += 1
     if done:
+        print('episode end in {} steps.'.format(eps_len))
+        eps_len = 0
         obs = env.reset()
+        obs = obs[:14]
 
 #%%
-# reparameterization is implemented using distribution.rsample
-# noise_mean = torch.zeros(action_dim)
-# noise_std = torch.ones(action_dim)
-# dbu = Normal(noise_mean, noise_std)
-
 obs = env.reset()
 obs = obs[:14]
+eps_len = 0
 for i in range(int(epoch_steps*epochs)):
     # training 
     # first train on random policy buffer
     if i % epoch_steps == 0:
         if i>0:
-            print('epoch {} done.', (i+1)%epoch_steps)
+            print('epoch {} done.'.format((i+1)%epoch_steps))
         for j in range(train_steps):
+            if (j+1) % 100 == 0:
+                print('trainning {} steps'.format(j+1))
             batch = buffer.sample()
             obs_train, a_train, r_train, obs_new_train, done_train = \
                 [torch.tensor(x,dtype=torch.float) for x in zip(*batch)]
@@ -91,28 +97,30 @@ for i in range(int(epoch_steps*epochs)):
             mean_train, std_train = policy(obs_train)
             dbu = Normal(mean_train,std_train)
             a_sample = dbu.rsample() # reparametrization
-            logp = dbu.log_prob(a_sample)
+            # need to sum the logp of univariate gaussians
+            logp = torch.sum(dbu.log_prob(a_sample),dim=1)
 
             q_val = q(obs_train,a_sample)
             q2_val = q2(obs_train,a_sample.detach())
             q_both = torch.cat((q_val,q2_val),dim=1)
             q_min, _ = torch.min(q_both,dim=1)
             yv = (q_min - alpha*logp).detach()
-
+            
+#            break
             # prevent gradients flowing to policy network when trainning q
             for param in policy.parameters():
                 param.requires_grad = False
-            loss_q = F.mse_loss(q_val,yq)
+            loss_q = F.mse_loss(q_val[:,0],yq)
             q_optim.zero_grad()
-            loss_q.backward()
+            loss_q.backward(retain_graph=True)
             q_optim.step()
 
-            loss_q2 = F.mse_loss(q2_val,yq)
+            loss_q2 = F.mse_loss(q2_val[:,0],yq)
             q2_optim.zero_grad()
             loss_q2.backward()
             q2_optim.step()
 
-            v_val = v(obs_train)
+            v_val = v(obs_train)[:,0]
             loss_v = F.mse_loss(v_val,yv)
             v_optim.zero_grad()
             loss_v.backward()
@@ -136,7 +144,8 @@ for i in range(int(epoch_steps*epochs)):
             for w, w_target in zip(v.parameters(),v_target.parameters()):
                 w_target.data = rho*w_target.data + (1-rho)*w.data
 
-
+    
+#    break
     obs_tensor = torch.tensor(obs,dtype=torch.float)
     mean,std = policy(obs_tensor)
     dbu = Normal(mean,std)
@@ -147,7 +156,10 @@ for i in range(int(epoch_steps*epochs)):
         r = min_r
     buffer.add([obs,a,r,obs_new[:14], done])
     obs = obs_new[:14]
+    eps_len += 1
     if done:
+        print('episode end in {} steps.'.format(eps_len))
+        eps_len = 0
         obs = env.reset()
         obs = obs[:14]
 
