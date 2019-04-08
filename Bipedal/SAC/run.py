@@ -17,12 +17,12 @@ obs_dim = 14
 action_dim = 4
 
 init_steps = int(1e4)
-epoch_steps = 2000
-epochs = 1000
-train_steps = 1000
+epoch_steps = 5000
+epochs = 100
+train_steps = 5000
 
 
-batch_size = 256
+batch_size = 100
 buffer_max = 1e6
 
 # check paper. Action smooth parameter
@@ -30,14 +30,14 @@ buffer_max = 1e6
 # check paper for entropy param
 # paper uses reward scaling of 5 for simple environments
 # which is equivalent to an alpha of 0.2
-alpha = 0.2
+alpha = 0
 
 gamma = 0.99
 rho = 0.995
 
-q_lr = 3e-4
-policy_lr = 3e-4
-v_lr = 3e-4
+q_lr = 1e-3
+policy_lr = 1e-3
+v_lr = 1e-3
 
 # check OpenAI implementation of policy network
 policy = Policy(obs_dim,action_dim,200)
@@ -99,6 +99,8 @@ for i in range(int(epoch_steps*epochs)):
             a_sample = dbu.rsample() # reparametrization
             # need to sum the logp of univariate gaussians
             logp = torch.sum(dbu.log_prob(a_sample),dim=1)
+            a_sample = torch.tanh(a_sample)
+            
 
             q_val = q(obs_train,a_sample)
             q2_val = q2(obs_train,a_sample.detach())
@@ -127,13 +129,15 @@ for i in range(int(epoch_steps*epochs)):
             v_optim.step()
 
             # should I use the same a_sample for policy training???
+            # OpenAI uses the same a_sample for policy training
             # open gradients flow to policy and close for q
             for param in policy.parameters():
                 param.requires_grad = True
             for param in q.parameters():
                 param.requires_grad = False
             # negative for maxmization!
-            loss = - torch.mean(q_val - alpha*logp) 
+            # notice q_val is wrong !!! Use q_val[:,0]
+            loss = - torch.mean(q_val[:,0] - alpha*logp) 
             policy_optim.zero_grad()
             loss.backward()
             policy_optim.step()
@@ -150,7 +154,7 @@ for i in range(int(epoch_steps*epochs)):
     mean,std = policy(obs_tensor)
     dbu = Normal(mean,std)
     # no reparemterization necessary when running
-    a = dbu.sample().data.tolist()
+    a = torch.tanh(dbu.sample()).data.tolist()
     obs_new, r, done, info = env.step(a)
     if r < -90:
         r = min_r
@@ -171,13 +175,13 @@ for i_episode in range(5):
     t = 0
     r_total = 0
     done = False
-    while not done and t<2000:
+    while not done and t<500:
         if (t+1)%100 == 0:
             print(t+1)
         env.render()
         obs_tensor = torch.from_numpy(obs.astype('float32'))
 #        obs_tensor[-10:] = 0
-        mean,_ = policy(obs_tensor)
+        mean, std = policy(obs_tensor)
 #            print(p)
         dbu = Normal(mean,std)
         a = dbu.sample()
