@@ -82,9 +82,9 @@ eps_len = 0
 for i in range(int(epoch_steps*epochs)):
     # training 
     # first train on random policy buffer
-    if i % epoch_steps == 0:
+    if i==0 or (i+1) % epoch_steps == 0:
         if i>0:
-            print('epoch {} done.'.format((i+1)%epoch_steps))
+            print('epoch {} done.'.format(int((i+1)/epoch_steps)))
         for j in range(train_steps):
             if (j+1) % 100 == 0:
                 print('trainning {} steps'.format(j+1))
@@ -177,7 +177,7 @@ for i_episode in range(5):
         env.render()
         obs_tensor = torch.from_numpy(obs.astype('float32'))
 #        obs_tensor[-10:] = 0
-        mean = policy(obs_tensor)
+        mean,_ = policy(obs_tensor)
 #            print(p)
         dbu = Normal(mean,std)
         a = dbu.sample()
