@@ -134,21 +134,14 @@ for i in range(int(epoch_steps*epochs)):
 
             # should I use the same a_sample for policy training???
             # OpenAI uses the same a_sample for policy training
-            # open gradients flow to policy and close for q
-#            for param in policy.parameters():
-#                param.requires_grad = True
-#            for param in q.parameters():
-#                param.requires_grad = False
             # negative for maxmization!
-            # notice q_val is wrong !!! Use q_val[:,0]
+            # notice q_val_sample is wrong !!! Use q_val_sample[:,0]
             q_val_sample = q(obs_train,a_sample)
             loss = - torch.mean(q_val_sample[:,0] - alpha*logp) 
             policy_optim.zero_grad()
             loss.backward()
             policy_optim.step()
             # remeber to open it up again for q
-#            for param in q.parameters():
-#                param.requires_grad = True
 
             for w, w_target in zip(v.parameters(),v_target.parameters()):
                 w_target.data = rho*w_target.data + (1-rho)*w.data
