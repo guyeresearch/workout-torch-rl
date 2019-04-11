@@ -108,17 +108,14 @@ for i in range(int(epoch_steps*epochs)):
             logp -= logp_tanh
             a_sample = torch.tanh(a_sample)
             
-
-            q_val = q(obs_train,a_sample)
-            q2_val = q2(obs_train,a_sample.detach())
+            # use a_train here, not a_sample !
+            q_val = q(obs_train,a_train)
+            q2_val = q2(obs_train,a_train)
             q_both = torch.cat((q_val,q2_val),dim=1)
             q_min, _ = torch.min(q_both,dim=1)
             yv = (q_min - alpha*logp).detach()
             
 #            break
-            # prevent gradients flowing to policy network when trainning q
-#            for param in policy.parameters():
-#                param.requires_grad = False
             loss_q = F.mse_loss(q_val[:,0],yq)
             q_optim.zero_grad()
             loss_q.backward(retain_graph=True)
@@ -144,7 +141,8 @@ for i in range(int(epoch_steps*epochs)):
 #                param.requires_grad = False
             # negative for maxmization!
             # notice q_val is wrong !!! Use q_val[:,0]
-            loss = - torch.mean(q_val[:,0] - alpha*logp) 
+            q_val_sample = q(obs_train,a_sample)
+            loss = - torch.mean(q_val_sample[:,0] - alpha*logp) 
             policy_optim.zero_grad()
             loss.backward()
             policy_optim.step()
