@@ -11,29 +11,24 @@ MIN_LOG_STD = -20
 MAX_LOG_STD = 2
 
 # simple three layers
+# paper implementation
 class Policy(nn.Module):
     def __init__(self,dim_in, dim_out, hidden=100):
         super().__init__()
         self.fc1 = nn.Linear(dim_in,hidden)
-
-        self.fc2_mean = nn.Linear(hidden,hidden)
-        self.fc3_mean = nn.Linear(hidden,dim_out)
-
-        self.fc2_std = nn.Linear(hidden,hidden)
-        self.fc3_std = nn.Linear(hidden,dim_out)
+        self.fc2 = nn.Linear(hidden,hidden)
+        self.fc3 = nn.Linear(hidden,dim_out)
 
 
     def forward(self,x):
         x = torch.relu(self.fc1(x))
-        x_mean = torch.relu(self.fc2_mean(x))
-        # unbounded x_mean
-        x_mean = self.fc3_mean(x_mean)
-
-        x_std = torch.relu(self.fc2_std(x))
-        x_std = self.fc3_std(x_std)
+        x = torch.relu(self.fc2(x))
+        x = self.fc3(x)
         # clamp log std
-        x_std = torch.clamp(x_std,MIN_LOG_STD,MAX_LOG_STD)
-        x_std = torch.exp(x_std)
+        x_mean = x[..., :int(dim_out/2)]
+        x_log_std = x[..., int(dim_out/2):]
+        x_log_std = torch.clamp(x_log_std,MIN_LOG_STD,MAX_LOG_STD)
+        x_std = torch.exp(x_log_std)
         return x_mean, x_std
 
 class Q(nn.Module):

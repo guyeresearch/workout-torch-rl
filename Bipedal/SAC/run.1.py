@@ -12,6 +12,7 @@ from torch.distributions.normal import Normal
 import copy
 import sys
 
+EPS = 1e-6
 
 obs_dim = 14
 action_dim = 4
@@ -103,7 +104,7 @@ for i in range(int(epoch_steps*epochs)):
             # need to sum the logp of univariate gaussians
             logp = torch.sum(dbu.log_prob(a_sample),dim=1)
             tanh2 = torch.pow(torch.tanh(a_sample),2)
-            logp_tanh = torch.sum(torch.log(1-tanh2),dim=1)
+            logp_tanh = torch.sum(torch.log(1-tanh2+EPS),dim=1)
             logp -= logp_tanh
             a_sample = torch.tanh(a_sample)
             
