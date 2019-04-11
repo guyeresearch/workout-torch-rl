@@ -10,29 +10,51 @@ import random
 MIN_LOG_STD = -20
 MAX_LOG_STD = 2
 
-# simple three layers
+# # simple three layers
+# class Policy(nn.Module):
+#     def __init__(self,dim_in, dim_out, hidden=100):
+#         super().__init__()
+#         self.fc1 = nn.Linear(dim_in,hidden)
+
+#         self.fc2_mean = nn.Linear(hidden,hidden)
+#         self.fc3_mean = nn.Linear(hidden,dim_out)
+
+#         self.fc2_std = nn.Linear(hidden,hidden)
+#         self.fc3_std = nn.Linear(hidden,dim_out)
+
+
+#     def forward(self,x):
+#         x = torch.relu(self.fc1(x))
+#         x_mean = torch.relu(self.fc2_mean(x))
+#         x_mean = torch.tanh(self.fc3_mean(x_mean))
+
+#         x_std = torch.relu(self.fc2_std(x))
+#         x_std = self.fc3_std(x_std)
+#         # clamp log std
+#         x_std = torch.clamp(x_std,MIN_LOG_STD,MAX_LOG_STD)
+#         x_std = torch.exp(x_std)
+#         return x_mean, x_std
+
+# OpenAI version
 class Policy(nn.Module):
     def __init__(self,dim_in, dim_out, hidden=100):
         super().__init__()
         self.fc1 = nn.Linear(dim_in,hidden)
-
-        self.fc2_mean = nn.Linear(hidden,hidden)
-        self.fc3_mean = nn.Linear(hidden,dim_out)
-
-        self.fc2_std = nn.Linear(hidden,hidden)
-        self.fc3_std = nn.Linear(hidden,dim_out)
-
+        self.fc2 = nn.Linear(hidden,hidden)
+        self.fc_mean = nn.Linear(hidden,dim_out)
+        self.fc_std = nn.Linear(hidden,dim_out)
 
     def forward(self,x):
         x = torch.relu(self.fc1(x))
-        x_mean = torch.relu(self.fc2_mean(x))
-        x_mean = torch.tanh(self.fc3_mean(x_mean))
+        x = torch.relu(self.fc2(x))
 
-        x_std = torch.relu(self.fc2_std(x))
-        x_std = self.fc3_std(x_std)
+        x_mean = self.fc_mean(x)
+        x_mean = torch.tanh(x_mean)
+
+        x_log_std = self.fc_std(x)
         # clamp log std
-        x_std = torch.clamp(x_std,MIN_LOG_STD,MAX_LOG_STD)
-        x_std = torch.exp(x_std)
+        x_log_std = torch.clamp(x_log_std,MIN_LOG_STD,MAX_LOG_STD)
+        x_std = torch.exp(x_log_std)
         return x_mean, x_std
 
 class Q(nn.Module):

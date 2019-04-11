@@ -31,7 +31,7 @@ buffer_max = 1e6
 # check paper for entropy param
 # paper uses reward scaling of 5 for simple environments
 # which is equivalent to an alpha of 0.2
-alpha = 0.1
+alpha = 0.2
 
 gamma = 0.99
 rho = 0.995
@@ -41,7 +41,7 @@ policy_lr = 1e-3
 v_lr = 1e-3
 
 # check OpenAI implementation of policy network
-policy = Policy(obs_dim,action_dim,200)
+policy = Policy(obs_dim,action_dim*2,200)
 q = Q(obs_dim,action_dim,200)
 q2 = Q(obs_dim,action_dim,200)
 v = V(obs_dim,200)
@@ -108,20 +108,23 @@ for i in range(int(epoch_steps*epochs)):
             logp -= logp_tanh
             a_sample = torch.tanh(a_sample)
             
-            # use a_train here, not a_sample !
-            q_val = q(obs_train,a_train)
-            q2_val = q2(obs_train,a_train)
+            q_val = q(obs_train,a_sample)
+            q2_val = q2(obs_train,a_sample.detach())
             q_both = torch.cat((q_val,q2_val),dim=1)
             q_min, _ = torch.min(q_both,dim=1)
             yv = (q_min - alpha*logp).detach()
             
 #            break
-            loss_q = F.mse_loss(q_val[:,0],yq)
+            # don't use q_val here!
+            q_val_train = q(obs_train,a_train)
+            loss_q = F.mse_loss(q_val_train[:,0],yq)
             q_optim.zero_grad()
-            loss_q.backward(retain_graph=True)
+            loss_q.backward()
             q_optim.step()
 
-            loss_q2 = F.mse_loss(q2_val[:,0],yq)
+            # don't use q2_val here!
+            q2_val_train = q2(obs_train,a_train)
+            loss_q2 = F.mse_loss(q2_val_train[:,0],yq)
             q2_optim.zero_grad()
             loss_q2.backward()
             q2_optim.step()
@@ -135,9 +138,8 @@ for i in range(int(epoch_steps*epochs)):
             # should I use the same a_sample for policy training???
             # OpenAI uses the same a_sample for policy training
             # negative for maxmization!
-            # notice q_val_sample is wrong !!! Use q_val_sample[:,0]
-            q_val_sample = q(obs_train,a_sample)
-            loss = - torch.mean(q_val_sample[:,0] - alpha*logp) 
+            # notice q_val is wrong! Use q_val[:,0]
+            loss = - torch.mean(q_val[:,0] - alpha*logp) 
             policy_optim.zero_grad()
             loss.backward()
             policy_optim.step()

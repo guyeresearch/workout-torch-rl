@@ -30,7 +30,7 @@ buffer_max = 1e6
 # check paper for entropy param
 # paper uses reward scaling of 5 for simple environments
 # which is equivalent to an alpha of 0.2
-alpha = 0
+alpha = 0.0029
 
 gamma = 0.99
 rho = 0.995
@@ -87,7 +87,9 @@ for i in range(int(epoch_steps*epochs)):
             print('epoch {} done.'.format(int((i+1)/epoch_steps)))
         for j in range(train_steps):
             if (j+1) % 100 == 0:
-                print('trainning {} steps'.format(j+1))
+                print('trainning {} steps. mean avg: {:.4f} std avg: {:.4f}'.format(j+1, 
+                      torch.mean(torch.abs(mean_train)).data.tolist(),
+                      torch.mean(std_train).data.tolist()))
             batch = buffer.sample()
             obs_train, a_train, r_train, obs_new_train, done_train = \
                 [torch.tensor(x,dtype=torch.float) for x in zip(*batch)]
@@ -99,8 +101,9 @@ for i in range(int(epoch_steps*epochs)):
             a_sample = dbu.rsample() # reparametrization
             # need to sum the logp of univariate gaussians
             logp = torch.sum(dbu.log_prob(a_sample),dim=1)
-            a_sample = torch.tanh(a_sample)
-            
+            # a_sample = torch.tanh(a_sample)
+            a_sample = torch.clamp(a_sample,env.action_space.low[0].tolist(),
+                env.action_space.high[0].tolist())            
 
             q_val = q(obs_train,a_sample)
             q2_val = q2(obs_train,a_sample.detach())
@@ -154,7 +157,10 @@ for i in range(int(epoch_steps*epochs)):
     mean,std = policy(obs_tensor)
     dbu = Normal(mean,std)
     # no reparemterization necessary when running
-    a = torch.tanh(dbu.sample()).data.tolist()
+    a = dbu.sample()
+    a = torch.clamp(a,env.action_space.low[0].tolist(),
+                env.action_space.high[0].tolist()) 
+    a = a.data.tolist()
     obs_new, r, done, info = env.step(a)
     if r < -90:
         r = min_r
@@ -186,8 +192,8 @@ for i_episode in range(5):
         dbu = Normal(mean,std)
         a = dbu.sample()
             #g = grad(obj,policy.parameters())
-#        obs_new, r, done, info = env.step(a.data.tolist())
-        obs_new, r, done, info = env.step(mean.data.tolist())
+        obs_new, r, done, info = env.step(a.data.tolist())
+#        obs_new, r, done, info = env.step(mean.data.tolist())
 #        action_explore = np.clip(action + noise(action),-1,1)
 #        print(done)
         #history.append([obs,action[0],reward,obs_new])
