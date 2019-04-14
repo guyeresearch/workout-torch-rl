@@ -37,6 +37,10 @@ TRPO
 
 PPO
 
+TD3
+
+SAC
+
 
 
 

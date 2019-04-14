@@ -31,7 +31,7 @@ buffer_max = 1e6
 # check paper for entropy param
 # paper uses reward scaling of 5 for simple environments
 # which is equivalent to an alpha of 0.2
-alpha = 0.025
+alpha = 0.0125
 
 gamma = 0.99
 rho = 0.995
@@ -199,7 +199,7 @@ for i_episode in range(5):
     print('points: {}'.format(r_total))
 
 
-torch.save(policy.state_dict(), 'policy_sac_310.pkl')
+#torch.save(policy.state_dict(), 'policy_sac_310.pkl')
 #torch.save(q.state_dict(), 'q_sac_310.pkl')
 
 #torch.save(q2.state_dict(), 'q2_td3_normal_walking_mid_trainx.pkl')
