@@ -1,7 +1,7 @@
 import gym
 import numpy as np
 import torch
-from lib import Policy, Q, Buffer, V
+from lib_1 import Policy, Q, Buffer, V
 
 import qn
 import torch.nn.functional as F
@@ -12,7 +12,7 @@ from torch.distributions.normal import Normal
 import copy
 import sys
 
-EPS = 1e-6
+EPS = 1e-8
 
 obs_dim = 14
 action_dim = 4
@@ -31,7 +31,7 @@ buffer_max = 1e6
 # check paper for entropy param
 # paper uses reward scaling of 5 for simple environments
 # which is equivalent to an alpha of 0.2
-alpha = 0.2
+alpha = 0.025
 
 gamma = 0.99
 rho = 0.995
@@ -56,7 +56,7 @@ v_optim = optim.Adam(v.parameters(),lr=v_lr)
 
 buffer = Buffer(batch_size,buffer_max)
 
-min_r = -15
+min_r = -20
 # initialization
 env = gym.make('BipedalWalker-v2')
 obs = env.reset()
@@ -175,7 +175,7 @@ for i_episode in range(5):
     t = 0
     r_total = 0
     done = False
-    while not done and t<500:
+    while not done and t<2000:
         if (t+1)%100 == 0:
             print(t+1)
         env.render()
@@ -183,12 +183,12 @@ for i_episode in range(5):
 #        obs_tensor[-10:] = 0
         mean, std = policy(obs_tensor)
 #            print(p)
-        dbu = Normal(mean,std)
-        a = dbu.sample()
-        a = torch.tanh(dbu.sample()).data.tolist()
+#        dbu = Normal(mean,std)
+#        a = dbu.sample()
+#        a = torch.tanh(dbu.sample()).data.tolist()
+        a = torch.tanh(mean).data.tolist()
             #g = grad(obj,policy.parameters())
         obs_new, r, done, info = env.step(a)
-#        obs_new, r, done, info = env.step(mean.data.tolist())
 #        action_explore = np.clip(action + noise(action),-1,1)
 #        print(done)
         #history.append([obs,action[0],reward,obs_new])
@@ -199,6 +199,7 @@ for i_episode in range(5):
     print('points: {}'.format(r_total))
 
 
-#torch.save(policy.state_dict(), 'policy_td3_normal_walking_mid_trainx.pkl')
-#torch.save(q.state_dict(), 'q_td3_normal_walking_mid_trainx.pkl')
+torch.save(policy.state_dict(), 'policy_sac_310.pkl')
+#torch.save(q.state_dict(), 'q_sac_310.pkl')
+
 #torch.save(q2.state_dict(), 'q2_td3_normal_walking_mid_trainx.pkl')

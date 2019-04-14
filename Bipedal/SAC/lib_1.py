@@ -18,6 +18,8 @@ class Policy(nn.Module):
         self.fc1 = nn.Linear(dim_in,hidden)
         self.fc2 = nn.Linear(hidden,hidden)
         self.fc3 = nn.Linear(hidden,dim_out)
+    
+        self.dim_out = dim_out
 
 
     def forward(self,x):
@@ -25,11 +27,11 @@ class Policy(nn.Module):
         x = torch.relu(self.fc2(x))
         x = self.fc3(x)
         # clamp log std
-        x_mean = x[..., :int(dim_out/2)]
-        x_log_std = x[..., int(dim_out/2):]
+        x_mean = x[..., :int(self.dim_out/2)]
+        x_log_std = x[..., int(self.dim_out/2):]
         x_log_std = torch.clamp(x_log_std,MIN_LOG_STD,MAX_LOG_STD)
         x_std = torch.exp(x_log_std)
-        return x_mean, x_std
+        return x_mean, x_std  
 
 class Q(nn.Module):
     def __init__(self,dim_in, action_dim, hidden=100):
