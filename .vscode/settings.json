@@ -1,5 +1,6 @@
 {
-    "python.pythonPath": "/Users/qiaonan/anaconda/bin/python",
+    "python.pythonPath": "/Users/qn/anaconda3/bin/python",
     "python.linting.pylintEnabled": true,
-    "python.linting.enabled": true
+    "python.linting.enabled": true,
+    "python.linting.pep8Enabled": false
 }
