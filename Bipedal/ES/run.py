@@ -25,11 +25,13 @@ hidden = 200
 noise_bank_size = int(1e5)
 eps_total = 3000
 lr = 1e-3
+std = 0.3
+weight_decay = 0.0005
 
 r_min = -20
 
 policy = Policy(obs_dim, action_dim, hidden)
-act_policy = copy.deepcopy(policy)
+# act_policy = copy.deepcopy(policy)
 paramReshape = ParamReshape(policy)
 param_vec = paramReshape.param2vec(policy.parameters())
 
@@ -49,7 +51,7 @@ for i in range(eps_total):
     noise = noises[rank]
     param_vec_noise = param_vec + noise
     params = paramReshape.vec2param(param_vec_noise)
-    for w_act, w in zip(act_policy.parameters(),params):
+    for w_act, w in zip(policy.parameters(),params):
         w_act.data = w.data
     
     obs = env.reset()
@@ -73,6 +75,18 @@ for i in range(eps_total):
     # test in short script
     rets = np.zeros(size,dtype='d')
     comm.Allgather(ret,rets)
+
+    # argsort sorts from low to high
+    idx = np.argsort(-rets)
+    current_utils = utils[idx]
+
+    grads = 0
+    for u, noise in zip(current_utils,noises):
+        grads += u*noise
+    param_vec += - param_vec*weight_decay + \
+         alpha/size/std*grads
+
+
 
     
 

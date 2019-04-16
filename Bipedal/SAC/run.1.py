@@ -31,7 +31,7 @@ buffer_max = 1e6
 # check paper for entropy param
 # paper uses reward scaling of 5 for simple environments
 # which is equivalent to an alpha of 0.2
-alpha = 0.0125
+alpha = 0.012
 
 gamma = 0.99
 rho = 0.995
@@ -56,7 +56,7 @@ v_optim = optim.Adam(v.parameters(),lr=v_lr)
 
 buffer = Buffer(batch_size,buffer_max)
 
-min_r = -20
+min_r = -100
 # initialization
 env = gym.make('BipedalWalker-v2')
 obs = env.reset()
