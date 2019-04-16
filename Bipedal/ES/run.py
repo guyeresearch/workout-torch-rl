@@ -31,11 +31,10 @@ weight_decay = 0.0005
 r_min = -20
 
 policy = Policy(obs_dim, action_dim, hidden)
-# act_policy = copy.deepcopy(policy)
 paramReshape = ParamReshape(policy)
 param_vec = paramReshape.param2vec(policy.parameters())
 
-utils = get_utils(size)
+utils = torch.from_numpy(get_utils(size),dtype='float32')
 
 dbu = Normal(torch.tensor(0.),torch.tensor(1.))
 noise_bank = dbu.sample((noise_bank_size,))
@@ -72,7 +71,6 @@ for i in range(eps_total):
     print('Worker {} finishes {}th episode in {} steps with a return of {}.'.
     format(rank, i, j, ret))
 
-    # test in short script
     rets = np.zeros(size,dtype='d')
     comm.Allgather(ret,rets)
 
