@@ -3,7 +3,9 @@ from torch.autograd import Variable
 import torch.nn as nn
 import torch.nn.functional as F
 import qn
-import random
+# import random
+import numpy as np
+import functools
 
 # simple three layers
 class Policy(nn.Module):
@@ -22,29 +24,48 @@ class Policy(nn.Module):
 
 
 class MultiRand():
-    def __init__(self,seeds,low,high,size):
-        self.low = low
-        self.high = high
-        self.size = size
+    def __init__(self,seeds,noise_bank,size):
+        self.noise_bank = noise_bank
         self.states = []
         for seed in seeds:
             torch.manual_seed(seed)
             state = torch.get_rng_state()
             self.states.append(state)
     
-    def get_rand_indices(self):
+    def get_noises(self):
         old_states = self.states
         self.states = []
-        indices = []
+        noises = []
         for state in old_states:
             torch.set_rng_state(state)
             index = torch.randint(self.low,self.high,
                 (self.size,))
-            indices.append(index)
+            noise = self.noise_bank[index]
+            noises.append(noise)
             self.states.append(
                 torch.get_rng_state()
             )
-        return indices
+        return noises
 
     
-    # def step(self):
+class ParamReshape():
+    def __init__(self,model):
+        self.shapes = [x.shape for x in model.parameters()]
+        self.vec_dim = functools.reduce(lambda a,b: np.prod(a)+np.prod(b),
+             self.shapes)
+        
+    
+    def param2vec(self,params):
+        return torch.cat([x.contiguous().view(-1) 
+            for x in params])
+
+    def vec2param(self,vec):
+        pointer = 0
+        params = []
+        for shape in self.shapes:
+            flat_len = np.prod(shape)
+            sub = vec[pointer:pointer+flat_len]
+            # yield sub.view(shape)
+            params.append(sub.view(shape))
+            pointer += flat_len
+        return params
