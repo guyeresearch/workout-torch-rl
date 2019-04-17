@@ -24,9 +24,10 @@ class Policy(nn.Module):
 
 
 class MultiRand():
-    def __init__(self,seeds,noise_bank,size):
+    def __init__(self,seeds,noise_bank,vec_dim):
         self.noise_bank = noise_bank
         self.states = []
+        self.vec_dim = vec_dim
         for seed in seeds:
             torch.manual_seed(seed)
             state = torch.get_rng_state()
@@ -38,8 +39,8 @@ class MultiRand():
         noises = []
         for state in old_states:
             torch.set_rng_state(state)
-            index = torch.randint(self.low,self.high,
-                (self.size,))
+            index = torch.randint(0,self.noise_bank.shape[0],
+                (self.vec_dim,))
             noise = self.noise_bank[index]
             noises.append(noise)
             self.states.append(
@@ -69,3 +70,11 @@ class ParamReshape():
             params.append(sub.view(shape))
             pointer += flat_len
         return params
+
+def get_utils(lam):
+    l = [x+1 for x in range(lam)]
+    f = lambda i: np.max([0, np.log(lam/2+1)-np.log(i)])
+    t = np.array([f(x) for x in l])
+    divisor = np.sum(t)
+    final = t/divisor - 1/lam
+    return final
