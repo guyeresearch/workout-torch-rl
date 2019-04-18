@@ -11,7 +11,9 @@ from torch.distributions.normal import Normal
 import copy
 import sys
 import pdb
+import os
 
+os.system('rm models/*')
 
 obs_dim = 4
 action_dim = 1
@@ -29,16 +31,17 @@ action_dim = 1
 
 noise_bank_size = int(1e4)
 lr = .1
-std = 0.2
-# weight_decay = 0.0005
-weight_decay = 0
+std = 0.3
+weight_decay = 0.0005
+# weight_decay = 0
 size = 50
-eps_total = size*30
+eps_total = size*20
+save_size = size*5
 
 # torch.manual_seed(1)
 
 
-policy = Policy(obs_dim, action_dim)
+policy = Policy(obs_dim, action_dim, 64)
 paramReshape = ParamReshape(policy)
 param_vec = paramReshape.param2vec(policy.parameters())
 param_vec_dim = param_vec.shape[0]
@@ -95,7 +98,7 @@ for i in range(eps_total):
         noises = []
         rets = []
     
-    if (i+1) % size*10 == 0:
+    if (i+1) % save_size == 0:
         params = paramReshape.vec2param(param_vec)
         for w_act, w in zip(policy.parameters(),params):
             w_act.data = w.data

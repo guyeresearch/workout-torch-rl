@@ -8,11 +8,11 @@ import numpy as np
 import functools
 
 class Policy(nn.Module):
-    def __init__(self,dim_in, dim_out):
+    def __init__(self,dim_in, dim_out, hidden):
         super().__init__()
-        self.fc1 = nn.Linear(dim_in,64)
-        self.fc2 = nn.Linear(64,64)
-        self.fc3 = nn.Linear(64,dim_out)
+        self.fc1 = nn.Linear(dim_in,hidden)
+        self.fc2 = nn.Linear(hidden,hidden)
+        self.fc3 = nn.Linear(hidden,dim_out)
 
     def forward(self,x):
         x = torch.tanh(self.fc1(x))

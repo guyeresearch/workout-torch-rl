@@ -11,7 +11,8 @@ rank = comm.Get_rank()
 size = comm.Get_size()
 
 
-
+# rets = np.zeros(size,dtype='d')
+# comm.Allgather(1.,rets)
 
 
 # test Allgather
@@ -19,14 +20,17 @@ env = gym.make('BipedalWalker-v2')
 obs = env.reset()
 _, r, _, _ = env.step(env.action_space.sample())
 
-print('rank {} reward {}'.format(rank,r))
+# print('rank {} reward {}'.format(rank,r))
 
+# pdb.set_trace()
 rets = np.zeros(size,dtype='d')
-comm.Allgather(r,rets)
+print(rank,type(r),type(rets),r,rets)
+comm.Allgather(np.float64(1.),rets)
+print(rets)
 
-pdb.set_trace()
+# pdb.set_trace()
 
-print('rank {} rets {}'.format(rank,rets))
+# print('rank {} rets {}'.format(rank,rets))
 
 # # test noises
 # torch.manual_seed(0)

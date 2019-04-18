@@ -12,27 +12,37 @@ import copy
 import sys
 from mpi4py import MPI
 import pdb
+import os
+
+
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
 
-torch.manual_seed(0)
+if rank == 0:
+    os.system('rm models/*')
+
+torch.manual_seed(3)
 
 obs_dim = 14
 action_dim = 4
 hidden = 200
 noise_bank_size = int(1e5)
-eps_total = 5000
-lr = 1e-3
-std = 0.5
+eps_total = 6000
+lr = 1e-2
+std = 0.8
 weight_decay = 0.0005
 # weight_decay = 0
-cycle_multiplier = 20
+gamma = 0.99
 
-r_min = -100
+cycle_multiplier = 10 # population of 15*4 = 120
+cycle_len = size*cycle_multiplier # 120
+save_size = cycle_multiplier*10
 
-cycle_len = size*cycle_multiplier
+
+r_min = -20
+
 
 policy = Policy(obs_dim, action_dim, hidden)
 paramReshape = ParamReshape(policy)
@@ -67,6 +77,7 @@ for i in range(eps_total):
     done = False
     ret = 0
     j = 0
+    discount = 1
     while not done:
         obs_tensor = torch.from_numpy(obs.astype('float32'))
         a = policy(obs_tensor)
@@ -74,15 +85,22 @@ for i in range(eps_total):
         obs_new = obs_new[:14]
         if r < -90:
             r = r_min
-        ret += r
+        ret += discount*r
         j += 1
+        discount *= gamma
         obs = obs_new
+    # if j == 1600:
+    #     ret = -50
+    # else:
+    #     ret = j
     if (i+1) % 10 == 0:
         print('Worker {} finishes {}th episode in {} steps with a return of {:.4f}.'.
         format(rank, i, j, ret))
+    
+    
 
     rets = np.zeros(size,dtype='d')
-    comm.Allgather(ret,rets)
+    comm.Allgather(np.float64(ret),rets)
     cycle_rets = np.concatenate((cycle_rets,rets))
 
     if (i+1) % cycle_multiplier == 0:
@@ -92,12 +110,9 @@ for i in range(eps_total):
         idx = np.argsort(-cycle_rets)
         current_utils = np.zeros(cycle_len)
         current_utils[idx] = utils
-        # # this is wrong!!!!
-        # current_utils = utils[idx]
+        
         grads = 0
-        # pdb.set_trace()
         for u, noise in zip(current_utils,cycle_noises):
-            # print(u,noise)
             grads += u*noise
         # print(grads)
         # no dividing by n when using utility
@@ -107,12 +122,13 @@ for i in range(eps_total):
         # break
 
 
-    if rank==0 and (i+1) % 100 == 0:
-        print(param_vec[:20])
+    if rank==0 and (i+1) % save_size == 0:
+        # print(param_vec[:20])
         params = paramReshape.vec2param(param_vec)
         for w_act, w in zip(policy.parameters(),params):
             w_act.data = w.data
-        torch.save(policy.state_dict(), 'models/policy_{}.pkl'.format(i+1))
+        torch.save(policy.state_dict(),
+         'models/policy_{}.pkl'.format(int((i+1)/save_size)))
 
 
 

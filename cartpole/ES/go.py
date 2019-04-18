@@ -7,7 +7,7 @@ import gym
 obs_dim = 4
 action_dim = 1
 
-policy = Policy(obs_dim,action_dim)
+policy = Policy(obs_dim,action_dim,64)
 policy.load_state_dict(torch.load('models/policy_{}.pkl'.format(sys.argv[1])))
 
 

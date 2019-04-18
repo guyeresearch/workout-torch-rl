@@ -12,7 +12,7 @@ policy.load_state_dict(torch.load('models/policy_{}.pkl'.format(sys.argv[1])))
 
 
 env = gym.make('BipedalWalker-v2')
-for i_episode in range(5):
+for i_episode in range(2):
     obs = env.reset()
     obs = obs[:14]
     t = 0
