@@ -28,12 +28,12 @@ torch.manual_seed(3)
 obs_dim = 14
 action_dim = 4
 hidden = 200
-noise_bank_size = int(1e5)
+noise_bank_size = int(1e6)
 eps_total = 6000
 lr = 1e-2
-std = 0.8
-weight_decay = 0.0005
-# weight_decay = 0
+std = 0.3
+# weight_decay = 0.0005
+weight_decay = 0
 gamma = 0.99
 
 cycle_multiplier = 10 # population of 15*4 = 120
@@ -75,9 +75,8 @@ for i in range(eps_total):
     obs = env.reset()
     obs = obs[:14]
     done = False
-    ret = 0
+    rs = []
     j = 0
-    discount = 1
     while not done:
         obs_tensor = torch.from_numpy(obs.astype('float32'))
         a = policy(obs_tensor)
@@ -85,14 +84,15 @@ for i in range(eps_total):
         obs_new = obs_new[:14]
         if r < -90:
             r = r_min
-        ret += discount*r
+        rs.append(r)
         j += 1
-        discount *= gamma
         obs = obs_new
-    # if j == 1600:
-    #     ret = -50
-    # else:
-    #     ret = j
+    
+    # cm = discount_cumsum(rs,gamma)
+    # ret = np.mean(cm)
+    ret = np.sum(rs)
+    # aj = j if j < 1600 else 0
+    # ret += aj*0.3
     if (i+1) % 10 == 0:
         print('Worker {} finishes {}th episode in {} steps with a return of {:.4f}.'.
         format(rank, i, j, ret))

@@ -6,6 +6,8 @@ import qn
 # import random
 import numpy as np
 import functools
+import scipy.signal
+
 
 # simple three layers
 class Policy(nn.Module):
@@ -78,3 +80,7 @@ def get_utils(lam):
     divisor = np.sum(t)
     final = t/divisor - 1/lam
     return final
+
+
+def discount_cumsum(x, discount):
+    return scipy.signal.lfilter([1], [1, float(-discount)], x[::-1], axis=0)[::-1]
