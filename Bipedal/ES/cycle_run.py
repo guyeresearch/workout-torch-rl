@@ -30,18 +30,18 @@ action_dim = 4
 hidden = 200
 noise_bank_size = int(1e6)
 eps_total = 6000
-lr = 1e-2
+lr = 1
 std = 0.3
 # weight_decay = 0.0005
 weight_decay = 0
 gamma = 0.99
 
-cycle_multiplier = 10 # population of 15*4 = 120
-cycle_len = size*cycle_multiplier # 120
+cycle_multiplier = 15 # population of 15*4 = 60
+cycle_len = size*cycle_multiplier # 60
 save_size = cycle_multiplier*10
 
 
-r_min = -20
+r_min = -30
 
 
 policy = Policy(obs_dim, action_dim, hidden)
@@ -49,6 +49,7 @@ paramReshape = ParamReshape(policy)
 param_vec = paramReshape.param2vec(policy.parameters())
 
 utils = torch.tensor(get_utils(cycle_len),dtype=torch.float32)
+# utils[5:] = 0.
 if rank == 0:
     print(utils)
 
@@ -88,9 +89,13 @@ for i in range(eps_total):
         j += 1
         obs = obs_new
     
-    # cm = discount_cumsum(rs,gamma)
+    cm = discount_cumsum(rs,gamma)
+    ret = cm[0]
     # ret = np.mean(cm)
-    ret = np.sum(rs)
+    # rs = np.array(rs)
+    # pos_idx = rs > 0
+    # ret = np.sum(rs[pos_idx])
+    # ret = np.sum(rs)
     # aj = j if j < 1600 else 0
     # ret += aj*0.3
     if (i+1) % 10 == 0:
@@ -105,7 +110,8 @@ for i in range(eps_total):
 
     if (i+1) % cycle_multiplier == 0:
         if rank == 0:
-            print('Update param_vec length {}'.format(cycle_rets.shape[0]))
+            print('Update param_vec length {} max ret {}'.format(cycle_rets.shape[0],
+                 np.max(cycle_rets)))
         # argsort sorts from low to high
         idx = np.argsort(-cycle_rets)
         current_utils = np.zeros(cycle_len)
