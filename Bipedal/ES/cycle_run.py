@@ -30,18 +30,18 @@ action_dim = 4
 hidden = 200
 noise_bank_size = int(1e6)
 eps_total = 6000
-lr = 1
-std = 0.3
-# weight_decay = 0.0005
-weight_decay = 0
+lr = 0.5
+std = 0.2
+weight_decay = 0.0005
+# weight_decay = 0
 gamma = 0.99
 
-cycle_multiplier = 15 # population of 15*4 = 60
-cycle_len = size*cycle_multiplier # 60
+cycle_multiplier = 30 # population of 15*4 = 80
+cycle_len = size*cycle_multiplier # 80
 save_size = cycle_multiplier*10
 
 
-r_min = -30
+r_min = -60
 
 
 policy = Policy(obs_dim, action_dim, hidden)
@@ -110,8 +110,8 @@ for i in range(eps_total):
 
     if (i+1) % cycle_multiplier == 0:
         if rank == 0:
-            print('Update param_vec length {} max ret {}'.format(cycle_rets.shape[0],
-                 np.max(cycle_rets)))
+            print('Update param_vec length {} max ret {:.4f} avg ret {:.4f}'.format(cycle_rets.shape[0],
+                 np.max(cycle_rets), np.mean(cycle_rets)))
         # argsort sorts from low to high
         idx = np.argsort(-cycle_rets)
         current_utils = np.zeros(cycle_len)
