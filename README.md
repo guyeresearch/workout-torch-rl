@@ -5,6 +5,8 @@ The code is orgnized based on the OpenAI gym environments. Each solver consists 
 
 I usually run the `run.py` in Spyder IDE that supports section-based execution. After running the training loop in Spyder, I run the evaluation loop to visualize and evaluate the result.
 
+I think this way of orgnaization is most friendly to beginners in RL and simpler than the way the spinningup code is strucutured.
+
 ### Current progress is as following:
 
 ##### CartPole-v1:
@@ -13,6 +15,7 @@ VPG (Binomial policy)
 
 VPG (Categorical policy)
 
+[Evolution Stategy](https://arxiv.org/abs/1703.03864) (multi-processes implementation with OpenMPI)
 
 
 
@@ -40,6 +43,8 @@ PPO
 TD3
 
 SAC
+
+[Evolution Stategy](https://arxiv.org/abs/1703.03864) (multi-processes implementation with OpenMPI)
 
 
 
