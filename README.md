@@ -27,6 +27,8 @@ off-policy VPG (not working)
 
 DDPG
 
+DDPG with [Hindsight Experience Replay](https://arxiv.org/abs/1707.01495) (More efficient for sparse rewards)
+
 
 
 
