@@ -17,7 +17,7 @@ action_dim = 4
 
 # parameters
 epochs = 800
-D_size = 3
+D_size = 5
 gamma = 0.98
 lda = 0.97 # for generalized advantage esitmate
 
@@ -34,7 +34,7 @@ val_optim = optim.Adam(val.parameters(), lr=val_lr)
 policy_optim = optim.Adam(policy.parameters(),lr=policy_lr)
 
 #%%
-std = 0.8
+std = 0.5
 eps_lens = []
 env = gym.make('BipedalWalker-v2')
 for k in range(epochs):
@@ -45,22 +45,27 @@ for k in range(epochs):
         eps = []
         obs = env.reset()
         obs = obs[:14]
-        a_pre = torch.tensor(env.action_space.sample())
+        obs_tensor = torch.from_numpy(obs.astype('float32'))
+        mean, skip_mean = policy(obs_tensor)
+        dbu = Normal(mean,std)
+        a_pre = dbu.sample()
         done = False
         i = 0
         while not done:
             obs_tensor = torch.from_numpy(obs.astype('float32'))
             mean, skip_mean = policy(obs_tensor)
-#            print(skip_mean)
-#            print(p)
-            dbu = Normal(mean,std)
-            a_now = dbu.sample()
-            # ber = Bernoulli(skip_mean)
-            # skip = ber.rsample()[0]
-#            a = a_now*(1-skip_mean) + a_pre*skip_mean
-            a = a_now
-            logp = torch.sum(dbu.log_prob(a))
-            #g = grad(obj,policy.parameters())
+            ber = Bernoulli(skip_mean)
+            skip = ber.sample()
+            logp_ber = ber.log_prob(skip)[0]
+            
+            if not skip[0]:
+                dbu = Normal(mean,std)
+                a = dbu.sample()
+                logp = torch.sum(dbu.log_prob(a))
+                logp += logp_ber
+            else:
+                a = a_pre
+                logp = logp_ber
             obs_new, r, done, info = env.step(a.data.tolist())
             obs_new = obs_new[:14]
             if r < -90:
@@ -139,7 +144,7 @@ for k in range(epochs):
     delta_cum = torch.cat(delta_cumx)
     
     policy_optim.zero_grad()
-    (-logp*delta_cum/scalar).mean().backward()
+    (-logp*delta_cum/scalar).sum().backward()
     policy_optim.step()
 #    break
 
@@ -158,7 +163,7 @@ for k in range(epochs):
 
 #%%
 arr = []
-std = 0.
+std = 0.4
 env = gym.make('BipedalWalker-v2')
 for i_episode in range(1):
     obs = env.reset()
@@ -188,6 +193,54 @@ for i_episode in range(1):
         t += 1
         r_total += r
     print('points: {}'.format(r_total))
+#%%
+    
+arr = []
+std = 0.1
+env = gym.make('BipedalWalker-v2')
+for i_episode in range(1):
+    obs = env.reset()
+    obs = obs[:14]
+    obs_tensor = torch.from_numpy(obs.astype('float32'))
+    mean, skip_mean = policy(obs_tensor)
+    dbu = Normal(mean,std)
+    a_pre = dbu.sample()
+    t = 0
+    r_total = 0
+    done = False
+    while not done and t<2000:
+        if (t+1)%100 == 0:
+            print(t+1)
+        env.render()
+        obs_tensor = torch.from_numpy(obs.astype('float32'))
+        mean, skip_mean = policy(obs_tensor)
+        ber = Bernoulli(skip_mean)
+        skip = ber.sample()
+        logp_ber = ber.log_prob(skip)[0]
+            
+        if not skip[0]:
+            dbu = Normal(mean,std)
+            a = dbu.sample()
+            logp = torch.sum(dbu.log_prob(a))
+            logp += logp_ber
+        else:
+            a = a_pre
+            logp = logp_ber
+            #g = grad(obj,policy.parameters())
+        obs_new, r, done, info = env.step(a.data.tolist())
+        arr.append(a.data.tolist())
+#        obs_new, r, done, info = env.step(mean.data.tolist())
+#        action_explore = np.clip(action + noise(action),-1,1)
+#        print(done)
+        #history.append([obs,action[0],reward,obs_new])
+        obs_new = obs_new[:14]
+        obs = obs_new
+        a_pre = a
+        t += 1
+        r_total += r
+    print('points: {}'.format(r_total))
+
+
 #%% Analysis
 import matplotlib.pyplot as plt
 
