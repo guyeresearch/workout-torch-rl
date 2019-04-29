@@ -163,7 +163,7 @@ for k in range(epochs):
 
 #%%
 arr = []
-std = 0.4
+std = 0.
 env = gym.make('BipedalWalker-v2')
 for i_episode in range(1):
     obs = env.reset()
@@ -196,7 +196,7 @@ for i_episode in range(1):
 #%%
     
 arr = []
-std = 0.1
+std = 0.5
 env = gym.make('BipedalWalker-v2')
 for i_episode in range(1):
     obs = env.reset()
