@@ -16,6 +16,17 @@ from torch import nn, optim
 from torch.autograd import grad
 from torch.distributions.normal import Normal
 
+#
+x = torch.tensor(2.,requires_grad=True)
+y = x*x
+op = optim.SGD([x],lr=0.01)
+y.backward(create_graph=True)
+op.step()
+grad(x,x)
+
+
+
+
 x = torch.tensor([[1,2],[3,4]],dtype=torch.float)
 std = torch.tensor([[1,1],[1,1]], dtype=torch.float)
 s = torch.tensor([[1,2],[3,4],[5,6]], dtype=torch.float)
