@@ -2,6 +2,7 @@ import torch
 from torch.autograd import Variable
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
 
 class Model(nn.Module):
     def __init__(self,dim_in=1, dim_out=1, hidden=40):

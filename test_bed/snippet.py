@@ -18,10 +18,12 @@ from torch.distributions.normal import Normal
 
 #
 x = torch.tensor(2.,requires_grad=True)
-y = x*x
+y = x*x*x
 op = optim.SGD([x],lr=0.01)
 y.backward(create_graph=True)
 op.step()
+
+grad(x.grad,x,retain_graph=True)
 grad(x,x)
 
 
